@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy – WealthOS</title>
+<meta name="description" content="How the WealthOS app collects, uses, stores and deletes your data.">
+<link rel="icon" href="mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="./"><img src="mark.png" alt="">WealthOS</a>
+    <nav><a href="privacy.html" aria-current="page">Privacy</a><a href="delete-account.html">Delete account</a></nav>
+  </header>
+
+  <h1>Privacy Policy</h1>
+  <p class="muted">Effective date: 15 October 2026</p>
+
+  <div class="card">
+    <p><strong>In short:</strong> WealthOS is a personal money tracker. You type in your own money details. They are stored in your own private space in Google Firebase, linked to your login, and only you can open them. We show no ads, we do not sell or share your data, and we never read your SMS, contacts, photos or location. You can delete your account and all its data from inside the app at any time.</p>
+  </div>
+
+  <p>This policy explains how the WealthOS Android app (package <code>com.suresh.wealthos</code>, "the app", "we") handles your information. WealthOS is made by an independent developer in Chennai, India. Contact: <a href="mailto:wealthos747@gmail.com">wealthos747@gmail.com</a>.</p>
+
+  <h2>1. Information we collect</h2>
+  <h3>Account information</h3>
+  <ul>
+    <li><strong>Email address</strong> (or a mobile number used as your login name) and a password, to create and sign in to your account. Sign-in is handled by Google Firebase Authentication; we never see or store your password ourselves.</li>
+    <li><strong>Mobile number</strong>, only if you choose to add it for OTP login (Setup → Security). Firebase sends the OTP by SMS.</li>
+    <li><strong>Your name</strong>, only if you type it in the app (used for the greeting on Home).</li>
+  </ul>
+  <h3>Money information you enter</h3>
+  <p>Everything you add yourself: income and expense entries, accounts and balances, categories and budgets, your Money Plan, savings and investments (SIPs, mutual funds, FD, RD, PPF, gold and similar), loans, repeating bills, future needs, goals, insurance policies, business entries and app settings. You can also import entries from Excel/CSV files or backup files you pick.</p>
+  <p>The app does <strong>not</strong> connect to your bank, does <strong>not</strong> read SMS, and does <strong>not</strong> ask for bank passwords, card numbers or UPI PINs. Please do not type such details into notes.</p>
+  <h3>Technical information</h3>
+  <p>Google Firebase, which runs our login and database, processes technical data such as IP address and device/app identifiers to sign you in securely, prevent abuse and keep the service working. We do not use any analytics, advertising or tracking SDK.</p>
+
+  <h2>2. How we use it</h2>
+  <ul>
+    <li>To sign you in and keep your data synced across your phones.</li>
+    <li>To show your reports: monthly flow, budgets, net worth, Money Plan and reminders.</li>
+    <li>To make automatic backups of your data inside your own account.</li>
+    <li>To reply when you email us.</li>
+  </ul>
+  <p>We do not use your data for advertising, profiling or credit decisions, and we do not sell it.</p>
+
+  <h2>3. Where your data is stored</h2>
+  <p>Your data is stored in Google Cloud Firestore (Firebase) in a private area tied to your account (<code>users/&lt;your id&gt;</code>). Security rules allow only your signed-in account to read or write it. Data is encrypted in transit (HTTPS/TLS) and encrypted at rest by Google. A copy is also kept on your phone so the app works offline; it syncs when you are back online.</p>
+  <p><strong>Automatic backups:</strong> once a week the app saves a full copy of your data inside your own account (the latest 8 are kept) and the latest copy on your phone. These backups are deleted together with your account.</p>
+
+  <h2>4. On your phone</h2>
+  <ul>
+    <li><strong>PIN and fingerprint lock:</strong> your 4-digit PIN is stored only on your phone in Android's encrypted secure storage. Fingerprint / face unlock is handled by Android; the app never receives your biometric data.</li>
+    <li><strong>Notifications (optional):</strong> reminders for daily entries, bill days and future needs are scheduled on the phone itself. You can turn them off in the app or in Android settings.</li>
+    <li><strong>Home-screen widget (optional):</strong> shows a short summary (safe to spend, budget left, net worth) only if you add the widget.</li>
+    <li><strong>Recent-apps preview</strong> is hidden so your numbers are not visible in the app switcher.</li>
+    <li><strong>Exports:</strong> Excel, CSV, PDF and backup files are created only when you ask, and go only where you choose to share them.</li>
+  </ul>
+
+  <h2>5. Prices from public sources</h2>
+  <p>To show today's value of your investments, the app downloads public prices. These requests contain no personal information (only a fund name or scheme code you searched, or a general price request):</p>
+  <div class="tablewrap"><table>
+    <tr><th>What</th><th>Service</th></tr>
+    <tr><td>Mutual fund NAV and fund search (AMFI data)</td><td>api.mfapi.in</td></tr>
+    <tr><td>Gold price in rupees</td><td>fawazahmed0 currency-api via cdn.jsdelivr.net (mirror: currency-api.pages.dev)</td></tr>
+    <tr><td>Gold price backup</td><td>api.gold-api.com and open.er-api.com (USD–INR rate)</td></tr>
+  </table></div>
+  <p>These services may see your IP address, like any website you visit, under their own policies.</p>
+
+  <h2>6. Sharing</h2>
+  <p>We do not share your personal or financial data with third parties. Your data is processed only by our service providers needed to run the app: Google Firebase (login and database) and Google Play (app delivery and in-app updates). We would disclose information only if required by Indian law.</p>
+
+  <h2>7. Your choices and rights</h2>
+  <ul>
+    <li><strong>See and change</strong> all your data in the app at any time.</li>
+    <li><strong>Export</strong> it as Excel, CSV or a full backup file (Setup → Backup &amp; export).</li>
+    <li><strong>Delete</strong> your account and all its data: in the app, <em>Setup → Security → Delete my account</em>, or by emailing <a href="mailto:wealthos747@gmail.com">wealthos747@gmail.com</a> from your account email. Details: <a href="delete-account.html">Delete your account</a>.</li>
+  </ul>
+
+  <h2>8. Retention</h2>
+  <p>Your data is kept while your account exists. When you delete your account, your data and login are removed from our live database immediately (in-app) or within 7 days of your email request (at most 30 days). Residual copies in Google's internal system backups are cleared by Google on its normal schedule.</p>
+
+  <h2>9. Children</h2>
+  <p>WealthOS is meant for adults (18+) managing their own money. It is not directed to children, and we do not knowingly collect data from children.</p>
+
+  <h2>10. Security</h2>
+  <p>We use Firebase security rules, encrypted connections, an app lock with PIN/biometrics and a hidden recent-apps preview. No method is 100% secure; please use a strong password and keep your phone locked.</p>
+
+  <h2>11. Changes</h2>
+  <p>If this policy changes, we will update this page and its effective date. Important changes will also be mentioned in the app's release notes.</p>
+
+  <h2>12. Contact</h2>
+  <p>Email: <a href="mailto:wealthos747@gmail.com">wealthos747@gmail.com</a> · Chennai, Tamil Nadu, India.</p>
+
+  <footer>
+    <a href="./">Home</a><a href="delete-account.html">Delete your account</a><a href="mailto:wealthos747@gmail.com">Contact</a>
+  </footer>
+</div>
+</body>
+</html>
