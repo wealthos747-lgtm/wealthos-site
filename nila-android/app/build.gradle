@@ -1,0 +1,21 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.nila.ai'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.nila.ai'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+    signingConfigs {
+        nila { storeFile file('nila.keystore'); storePassword 'nila-ai-key'; keyAlias 'nila'; keyPassword 'nila-ai-key' }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.nila }
+        debug { signingConfig signingConfigs.nila }
+    }
+    lint { checkReleaseBuilds false; abortOnError false }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
