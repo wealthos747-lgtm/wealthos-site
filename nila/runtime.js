@@ -20,7 +20,7 @@ const LDB={
 const DL={async save({filename,data}){if(window.NilaAndroid&&NilaAndroid.saveFile){const blob=data instanceof Blob?data:new Blob([data]);const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]||'');fr.onerror=rej;fr.readAsDataURL(blob)});const ok=NilaAndroid.saveFile(filename,b64);if(!ok)throw{code:'unavailable'};return{status:'saved'}}const blob=data instanceof Blob?data:new Blob([data]);const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);return{status:'saved'}}};
 
 /* ---------- AI settings ---------- */
-const AI_DEFAULT={provider:'claude',claudeKey:'',geminiKey:'',claudeModels:{quick:'claude-haiku-5-5',default:'claude-sonnet-5-5',complex:'claude-opus-5-5'},geminiModel:'gemini-3.6-flash'};
+const AI_DEFAULT={provider:'claude-app',claudeKey:'',geminiKey:'',claudeModels:{quick:'claude-haiku-5-5',default:'claude-sonnet-5-5',complex:'claude-opus-5-5'},geminiModel:'gemini-3.6-flash'};
 window.aiCfg=()=>{try{const c=JSON.parse(localStorage.getItem('nila.ai')||'{}');return{...AI_DEFAULT,...c,claudeModels:{...AI_DEFAULT.claudeModels,...(c.claudeModels||{})}}}catch{return{...AI_DEFAULT}}};
 window.aiSave=c=>{try{localStorage.setItem('nila.ai',JSON.stringify(c))}catch{}};
 
@@ -80,6 +80,9 @@ async function geminiRun(msgs,opts,cfg){
     contents.push({role:'user',parts:resp})}
   return{text:all,last,truncated:true}}
 async function run(input,opts){opts=opts||{};const cfg=aiCfg();const msgs=mergeTurns(input);
+  if(cfg.provider==='claude-app'){if(!window.NILA_BRIDGE_UI)throw{code:'no_key'};let prompt=msgs.map(m=>(m.role==='assistant'?'ASSISTANT (earlier answer):\n':'')+m.content).join('\n\n---\n\n');
+    if(opts.tools&&opts.tools.length&&window.NILA_CONTEXT){const lastUser=[...msgs].reverse().find(m=>m.role==='user');const pack=await window.NILA_CONTEXT(lastUser?lastUser.content:'');prompt+=`\n\n=== DATA PACK (from my Nila app; you have no tools, so use this data in place of tool results) ===\n${pack}\n=== END DATA PACK ===\n\nAnswer now using only the data above. If something needed is missing, say which report to upload.`}
+    try{const text=await window.NILA_BRIDGE_UI(prompt,{json:/Return only valid JSON/.test(prompt)});opts.onText&&opts.onText({text,delta:text});return{text,last:text,truncated:false}}catch(e){if(e&&e.code)throw e;throw{code:'cancelled'}}}
   if(cfg.provider==='gemini'?!cfg.geminiKey:!cfg.claudeKey)throw{code:'no_key'};
   try{const r=cfg.provider==='gemini'?await geminiRun(msgs,opts,cfg):await claudeRun(msgs,opts,cfg);if(!r.text||!r.text.trim())throw{code:'empty_completion'};return r}
   catch(e){if(e&&e.name==='AbortError')throw{code:'cancelled'};if(e instanceof TypeError)throw{code:'network',message:e.message};throw e}}
@@ -92,11 +95,11 @@ SAMPLE.limits=async()=>({maxPromptBytes:900000,tools:{maxCount:20}});
 window.NILA_SAMPLE=SAMPLE;window.NILA_parseLoose=parseLoose;window.NILA_gSchema=gSchema;
 
 /* ---------- local error text ---------- */
-window.LOCAL_ERR={no_key:'Add your AI key in Settings → AI engine first. Everything else works without it.',bad_key:'Your AI key was not accepted. Check it in Settings → AI engine.',bad_model:'That AI model is not available on your key. Pick another in Settings → AI engine.',network:'Could not reach the AI service. Check your internet and try again.',no_credit:'Your AI account has no credit or free quota left. Top up, or switch engine in Settings.'};
+window.LOCAL_ERR={no_key:'Set up AI in Settings → AI engine (Claude app is free with your plan). Everything else works without it.',bad_key:'Your AI key was not accepted. Check it in Settings → AI engine.',bad_model:'That AI model is not available on your key. Pick another in Settings → AI engine.',network:'Could not reach the AI service. Check your internet and try again.',no_credit:'Your AI account has no credit or free quota left. Top up, or switch engine in Settings.'};
 
 /* ---------- AI settings card (used by Settings) ---------- */
 window.aiSettingsCard=function(){const c=aiCfg();
-  const prov=h('select',{id:'aiProv'},h('option',{value:'claude',selected:c.provider==='claude'},'Claude API (Anthropic) · pay per use'),h('option',{value:'gemini',selected:c.provider==='gemini'},'Gemini API (Google) · has a free tier'));
+  const prov=h('select',{id:'aiProv'},h('option',{value:'claude-app',selected:c.provider==='claude-app'},'Claude app · free with your Claude plan (copy and paste)'),h('option',{value:'claude',selected:c.provider==='claude'},'Claude API (Anthropic) · pay per use'),h('option',{value:'gemini',selected:c.provider==='gemini'},'Gemini API (Google) · has a free tier'));
   const ck=h('input',{type:'password',id:'aiCK',value:c.claudeKey,placeholder:'sk-ant-…',autocomplete:'off'});
   const gk=h('input',{type:'password',id:'aiGK',value:c.geminiKey,placeholder:'AIza…',autocomplete:'off'});
   const gm=h('input',{type:'text',id:'aiGM',value:c.geminiModel,list:'gemModels'});const gl=h('datalist',{id:'gemModels'});
@@ -107,9 +110,9 @@ window.aiSettingsCard=function(){const c=aiCfg();
   const test=async()=>{save();status.textContent='Testing…';try{const r=await SAMPLE('Reply with exactly: Nila is connected.',{modelTier:'quick'});status.textContent='✓ '+r.text.slice(0,80)}catch(e){status.textContent=sampleErr(e)}};
   const cWrap=h('div',{class:'grid2'},h('label',{class:'field',style:'grid-column:1/-1'},h('span',{},'Claude API key (console.anthropic.com → API keys)'),ck),h('label',{class:'field'},h('span',{},'Fast model'),cm[0]),h('label',{class:'field'},h('span',{},'Main model'),cm[1]),h('label',{class:'field'},h('span',{},'Deep model'),cm[2]));
   const gWrap=h('div',{class:'grid2'},h('label',{class:'field',style:'grid-column:1/-1'},h('span',{},'Gemini API key (aistudio.google.com → Get API key)'),gk),h('label',{class:'field'},h('span',{},'Model'),gm,gl),h('div',{class:'field'},h('span',{},' '),h('button',{class:'btn sm',type:'button',onclick:loadGem},'Load my models')));
-  const sync=()=>{cWrap.hidden=prov.value!=='claude';gWrap.hidden=prov.value!=='gemini'};prov.onchange=()=>{sync();save()};sync();
-  return h('div',{class:'card'},h('h3',{},'AI engine'),h('p',{class:'small muted'},'Nila uses your own AI key, stored only on this device. Maths, charts, KRAs, forecasts, gaps and reports all work without a key. The key powers Ask, briefs, plans, minutes and decks.'),
-    h('label',{class:'field'},h('span',{},'Engine'),prov),cWrap,gWrap,
+  const appNote=h('p',{class:'help'},h('b',{},'How it works: '),'when you ask something, Nila prepares your question with the right data. You paste it in Claude (app or claude.ai) and paste the answer back. No API key, no extra cost: it uses your existing Claude plan.');const sync=()=>{cWrap.hidden=prov.value!=='claude';gWrap.hidden=prov.value!=='gemini';appNote.hidden=prov.value!=='claude-app'};prov.onchange=()=>{sync();save()};sync();
+  return h('div',{class:'card'},h('h3',{},'AI engine'),h('p',{class:'small muted'},'Pick how Nila talks to AI. Studio, decks, KRAs, forecasts, ROI and gaps all work without AI. AI powers Ask, briefs, plans, minutes and explanations.'),
+    h('label',{class:'field'},h('span',{},'Engine'),prov),appNote,cWrap,gWrap,
     h('div',{class:'row'},h('button',{class:'btn teal',type:'button',onclick:()=>{save();toast('AI settings saved')}},'Save AI settings'),h('button',{class:'btn',type:'button',onclick:test},'Test connection')),status,
     h('p',{class:'help'},h('b',{},'Company data: '),'on the free Gemini tier, Google may use prompts to improve its products and reviewers may read them. For confidential account data, use the Claude API or a paid Gemini plan.'))};
 

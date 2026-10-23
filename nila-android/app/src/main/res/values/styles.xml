@@ -1,7 +1,7 @@
 <resources>
     <style name="NilaTheme" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#0A1023</item>
-        <item name="android:navigationBarColor">#0A1023</item>
-        <item name="android:windowBackground">#0A1023</item>
+        <item name="android:statusBarColor">#07080E</item>
+        <item name="android:navigationBarColor">#07080E</item>
+        <item name="android:windowBackground">#07080E</item>
     </style>
 </resources>

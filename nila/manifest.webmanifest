@@ -1,13 +1,13 @@
 {
  "name": "Nila AI",
  "short_name": "Nila",
- "description": "Private business-intelligence agent for key accounts",
+ "description": "Private business-intelligence agent: Excel to dashboards and decks, KRAs, forecasts, ROI.",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
  "orientation": "any",
- "background_color": "#0A1023",
- "theme_color": "#0A1023",
+ "background_color": "#07080E",
+ "theme_color": "#07080E",
  "icons": [
   {
    "src": "icons/icon-192.png",

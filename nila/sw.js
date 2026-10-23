@@ -1,5 +1,5 @@
-const V='nila-v2';
-const SHELL=['./','index.html','runtime.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','vendor/xlsx.full.min.js','vendor/pptxgen.bundle.js','vendor/marked.min.js','vendor/purify.min.js'];
+const V='nila-v3';
+const SHELL=['./','index.html','runtime.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','vendor/xlsx.full.min.js','vendor/pptxgen.bundle.js','vendor/marked.min.js','vendor/purify.min.js','theme.css','studio.js','deck.js','guide.js','sync.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(SHELL)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 const keep=(req,res)=>{if(res&&res.ok){const c=res.clone();caches.open(V).then(x=>x.put(req,c))}return res};
