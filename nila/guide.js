@@ -1,24 +1,37 @@
 /* ===== Nila guide: theme, welcome, home extras, help, tour, Claude app bridge ===== */
 "use strict";
 /* ---------- theme ---------- */
-const THEMES=[['aurora','Aurora glass','radial-gradient(60% 70% at 20% 20%,#BAA6FF,transparent 70%),radial-gradient(60% 70% at 85% 25%,#FFB6D8,transparent 70%),radial-gradient(60% 70% at 70% 90%,#FFD6AA,transparent 70%),#F7F4FF'],['nebula','Nebula glass','radial-gradient(60% 70% at 20% 20%,#7C5CFF,transparent 70%),radial-gradient(60% 70% at 85% 30%,#FF5FA2,transparent 70%),#0A0720'],['dark','Eclipse','linear-gradient(135deg,#07080E 40%,#1E2338),radial-gradient(circle at 75% 30%,#F2C46D 0 12%,transparent 13%)'],['light','Pearl','linear-gradient(135deg,#FFFFFF 40%,#E6E9F3)'],['auto','Auto','linear-gradient(90deg,#F7F4FF 50%,#0A0720 50%)']];
-const LIGHTS=['aurora','light'];
-const BARS={aurora:['#F4F1FF',true],nebula:['#0A0720',false],dark:['#07080E',false],light:['#F2F3F9',true]};
-function resolveTheme(t){return t==='auto'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'nebula':'aurora'):t}
+const THEMES=[
+ ['liquid','Liquid Glass','Clear frosted glass, iPhone style',true,'#EEF3FB','Trending'],
+ ['aurora','Aurora Glass','Pastel aurora, violet to pink',true,'#F4F1FF',''],
+ ['nebula','Nebula Glass','Aurora glass at night',false,'#0A0720',''],
+ ['midnight','Midnight Pro','Sharp dark, one violet accent',false,'#08090C','Most loved'],
+ ['royal','Royal Navy & Gold','Navy, gold, serif luxury',false,'#0A1430',''],
+ ['bento','Bento Pastel','Friendly pastel tiles',true,'#F4F4F1','Trending'],
+ ['emerald','Emerald Executive','Crisp white and deep green',true,'#F6FAF8',''],
+ ['neon','Neon Night','Cyan and magenta glow',false,'#05040D',''],
+ ['crimson','Crimson Pro','White, black, sharp red',true,'#F7F7F9',''],
+ ['dark','Eclipse','Deep space with gold moon',false,'#07080E',''],
+ ['light','Pearl','Plain light, print friendly',true,'#F2F3F9',''],
+ ['auto','Auto','Liquid Glass by day, Nebula at night',true,'#EEF3FB','']];
+const TH=Object.fromEntries(THEMES.map(t=>[t[0],t]));
+function resolveTheme(t){return t==='auto'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'nebula':'liquid'):(TH[t]?t:'liquid')}
 function currentPref(){return lsGet('nila.theme2','aurora')}
-function applyTheme(t){lsSet('nila.theme2',t);const r=resolveTheme(t);document.documentElement.dataset.theme=r;const light=LIGHTS.includes(r);const bar=BARS[r]||BARS.aurora;const mt=document.querySelector('meta[name=theme-color]');if(mt)mt.content=bar[0];
-  try{if(window.NilaAndroid&&NilaAndroid.setBars)NilaAndroid.setBars(bar[0],bar[1])}catch(e){}
-  const b=$('#themeBtn');if(b)b.innerHTML=light?'<svg class="i" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>':'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'}
-function isLight(){return LIGHTS.includes(document.documentElement.dataset.theme)}
+function applyTheme(t){lsSet('nila.theme2',t);const r=resolveTheme(t);document.documentElement.dataset.theme=r;const meta=TH[r];const light=meta[3];const mt=document.querySelector('meta[name=theme-color]');if(mt)mt.content=meta[4];
+  try{if(window.NilaAndroid&&NilaAndroid.setBars)NilaAndroid.setBars(meta[4],light)}catch(e){}
+  const b=$('#themeBtn');if(b)b.innerHTML='<svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1.1 0-.9.7-1.6 1.6-1.6h1.9A4.7 4.7 0 0 0 21 11c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg>'}
+function isLight(){const m=TH[document.documentElement.dataset.theme];return m?m[3]:true}
 try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(currentPref()==='auto')applyTheme('auto')})}catch(e){}
-function themePicker(onPick){const cur=currentPref();return h('div',{class:'theme-pick'},THEMES.map(([k,l,bg])=>h('button',{type:'button','aria-pressed':String(cur===k),onclick:ev=>{applyTheme(k);ev.currentTarget.parentNode.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===ev.currentTarget)));onPick&&onPick(k)}},h('span',{class:'sw',style:`background:${bg}`}),l)))}
-window.themeSettingsCard=()=>h('div',{class:'card'},h('h3',{},'Look'),h('p',{class:'small muted'},'Aurora is light frosted glass. Nebula is the same glass at night. Eclipse and Pearl are the classic looks. Auto switches Aurora and Nebula with your phone.'),themePicker());
+function themeMock(id){const r=id==='auto'?'liquid':id;return h('div',{class:'tm','data-theme':r,'aria-hidden':'true'},h('div',{class:'sd'},h('i',{class:'on'}),h('i'),h('i'),h('i'),h('i')),h('div',{class:'mn'},h('div',{class:'h1'},'Good morning'),h('div',{class:'ks'},h('span',{},h('b',{},'₹2.78 Cr'),h('em',{},'▲ 7.7%')),h('span',{},h('b',{},'29.5 K'),h('em',{},'▲ 7.8%')),h('span',{},h('b',{},'4.3'),h('em',{},'▲ 0.2'))),h('div',{class:'ch'},[40,64,50,82,58,92,74].map(v=>h('i',{style:`height:${v}%`})))))}
+function themePicker(onPick){const cur=currentPref();const box=h('div',{class:'tgal'},THEMES.map(([k,l,desc,,,tag])=>h('button',{type:'button','aria-pressed':String(cur===k),title:desc,onclick:ev=>{applyTheme(k);box.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===ev.currentTarget)));onPick&&onPick(k)}},themeMock(k),h('span',{class:'nm'},l,tag?h('small',{},tag):''),h('span',{class:'small muted',style:'padding:0 4px'},desc))));return box}
+function openThemeGallery(){openSheet('Choose your look',h('p',{class:'small muted'},'Tap any look to try it right away. Change it whenever you like; your choice is saved on this device.'),themePicker(),h('div',{class:'row'},h('button',{class:'btn primary',onclick:()=>closeSheet()},'Done')))}
+window.themeSettingsCard=()=>h('div',{class:'card'},h('div',{class:'row between'},h('h3',{},'Look'),h('span',{class:'small muted'},'12 looks')),themePicker());
 
 /* ---------- header extras ---------- */
 function wireHeader(){const right=$('#settingsBtn');if(!right||$('#themeBtn'))return;
   const ask=h('button',{class:'head-ask',onclick:()=>{go('ask');setTimeout(()=>{const t=$('#askMount textarea');t&&t.focus()},80)}},h('span',{html:'<svg class="i" viewBox="0 0 24 24"><path d="M12 3l2 7 7 2-7 2-2 7-2-7-7-2 7-2z"/></svg>',style:'display:contents'}),h('span',{},'Ask Nila anything about your accounts…'),h('kbd',{},'/'));
   const tour=h('button',{class:'icon-btn',id:'tourBtn','aria-label':'Guided tour',title:'Guided tour',onclick:()=>startTour()},h('span',{html:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/></svg>',style:'display:contents'}));
-  const th=h('button',{class:'icon-btn',id:'themeBtn','aria-label':'Switch light or dark',title:'Light / dark',onclick:()=>applyTheme(isLight()?'nebula':'aurora')});
+  const th=h('button',{class:'icon-btn',id:'themeBtn','aria-label':'Choose look',title:'Choose look',onclick:()=>openThemeGallery()});
   right.before(ask,tour,th);applyTheme(currentPref());
   document.addEventListener('keydown',e=>{if(e.key==='/'&&!/input|textarea|select/i.test((document.activeElement||{}).tagName||'')&&$('#overlay').hidden){e.preventDefault();ask.click()}})}
 
@@ -80,7 +93,7 @@ function helpView(){const v=$('#view-help');if(!v)return;const icon=id=>{const n
     h('div',{class:'card'},h('h3',{},'Good to know'),h('div',{class:'md'},md(`- **Your data stays on this device.** Download a backup every week (Settings → Backup), or turn on Google Drive sync.\n- **AI without extra cost:** Settings → AI engine → *Claude app*. Nila prepares your question with the data; you paste it in Claude and paste the answer back. Uses your existing Claude plan.\n- **Everything else works without AI:** Studio, decks, KRAs, forecasts, ROI, gaps, log.\n- **Same report every week?** Upload it onto the same report in Data library; Nila replaces those dates and keeps the rest.\n- **Phone app:** install from the website menu, or use the APK. Laptop: the install icon in the address bar.`))))}
 
 /* ---------- tour ---------- */
-const TOUR=[[null,'Welcome to nila AI','A 60-second walk through every tab. Use Next, or press Esc to stop.'],['studio','Studio','Drop any Excel here and get a Power BI style dashboard. Tap a bar to filter everything.'],['deck','Deck Builder','Pick slides and Nila builds a stylish PowerPoint from your report, with real charts.'],['ask','Ask Nila','Ask anything in English or Tanglish. Answers use your data and show the source.'],['rev','Revenue, ROI and Forecast','Compare periods, check if a campaign paid back, and see where numbers will land.'],['gaps','Gaps & fixes','Nila finds problems early and gives the root cause and fix plan.'],['log','Daily log','Speak after every call. Nila turns it into entries and follow-ups.'],['ops','Accounts','Health score, meeting brief, JBP deck and negotiation prep for each account.'],['kra','KRA scorecard','Track your monthly score and get your appraisal draft.'],['data','Data library','All your reports. Upload the same report again to update it.'],['#themeBtn','Your look','Tap to switch between Aurora (light glass) and Nebula (dark glass). More looks in Settings.'],['help','Help & tour','Come back here whenever you need a refresher.']];
+const TOUR=[[null,'Welcome to nila AI','A 60-second walk through every tab. Use Next, or press Esc to stop.'],['studio','Studio','Drop any Excel here and get a Power BI style dashboard. Tap a bar to filter everything.'],['deck','Deck Builder','Pick slides and Nila builds a stylish PowerPoint from your report, with real charts.'],['ask','Ask Nila','Ask anything in English or Tanglish. Answers use your data and show the source.'],['rev','Revenue, ROI and Forecast','Compare periods, check if a campaign paid back, and see where numbers will land.'],['gaps','Gaps & fixes','Nila finds problems early and gives the root cause and fix plan.'],['log','Daily log','Speak after every call. Nila turns it into entries and follow-ups.'],['ops','Accounts','Health score, meeting brief, JBP deck and negotiation prep for each account.'],['kra','KRA scorecard','Track your monthly score and get your appraisal draft.'],['data','Data library','All your reports. Upload the same report again to update it.'],['#themeBtn','Your look','Tap here any time to pick from 12 looks: Liquid Glass, Midnight Pro, Royal Navy & Gold, Bento and more.'],['help','Help & tour','Come back here whenever you need a refresher.']];
 let TS=null;
 function startTour(i=0){closeSheet();endTour(true);TS={i,block:h('div',{class:'tour-block'}),spot:h('div',{class:'tour-spot'}),card:h('div',{class:'tour-card',role:'dialog','aria-live':'polite'})};document.body.append(TS.block,TS.spot,TS.card);document.addEventListener('keydown',tourKey);tourStep()}
 function tourKey(e){if(!TS)return;if(e.key==='Escape')endTour();else if(e.key==='ArrowRight')tourGo(1);else if(e.key==='ArrowLeft')tourGo(-1)}

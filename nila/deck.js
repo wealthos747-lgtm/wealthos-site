@@ -15,7 +15,7 @@ const SLIDES=[
   {id:'actions',name:'Action plan',desc:'Open follow-ups with owner and due date',on:false,art:'table',need:'actions'},
   {id:'next',name:'Next steps',desc:'Your asks and plan, written by you (Nila suggests)',on:true,art:'bullets'},
   {id:'thanks',name:'Thank you',desc:'Closing slide',on:true,art:'title'}];
-const DK={dsId:null,range:'30',from:'',to:'',account:'',measure:'',dimA:'',dimB:'',style:'aurora',title:'',picks:new Set(SLIDES.filter(s=>s.on).map(s=>s.id)),deepN:5,next:'',filters:{}};
+const DK={dsId:null,range:'30',from:'',to:'',account:'',measure:'',dimA:'',dimB:'',style:(()=>{try{return JSON.parse(localStorage.getItem('nila.deckstyle'))||'aurora'}catch(e){return'aurora'}})(),title:'',picks:new Set(SLIDES.filter(s=>s.on).map(s=>s.id)),deepN:5,next:'',filters:{}};
 
 async function deckData(){const ds=dsById(DK.dsId);const m=(typeof ST!=='undefined'&&ST.m&&ST.m.ds===ds)?ST.m:await Studio.model(ds);
   const measure=m.measures.includes(DK.measure)?DK.measure:Studio.pickMeasures(m)[0];const dims=Studio.pickDims(m);const dimA=m.dims.includes(DK.dimA)?DK.dimA:dims[0]||'';const dimB=m.dims.includes(DK.dimB)?DK.dimB:(dims.find(d=>d!==dimA)||'');
@@ -71,68 +71,81 @@ async function deckView(){const v=$('#view-deck');if(!v)return;
       DK.dimB?h('label',{class:'field'},h('span',{},'Mix by'),sel(m.dims,DK.dimB,x=>DK.dimB=x)):'',
       DK.dimA?h('label',{class:'field'},h('span',{},'For one '+DK.dimA.toLowerCase()+' only'),sel(accs,DK.account,x=>{DK.account=x;DK.next='';DK.title=''},'All')):'',
       h('label',{class:'field'},h('span',{},'Deep-dives'),sel([['3','Top 3'],['5','Top 5'],['8','Top 8'],['10','Top 10']],String(DK.deepN),x=>DK.deepN=Number(x))),
-      h('label',{class:'field'},h('span',{},'Look'),sel([['aurora','Aurora (light glass)'],['dark','Eclipse (dark, premium)'],['light','Pearl (plain, print friendly)']],DK.style,x=>DK.style=x))),
+      ),
       h('label',{class:'field'},h('span',{},'Deck title'),title),
       Object.keys(DK.filters||{}).length?h('p',{class:'small muted'},'Using Studio filters: ',Object.entries(DK.filters).map(([k,v])=>`${k}: ${v.join(', ')}`).join(' · '),' ',h('button',{class:'btn ghost sm',onclick:()=>{DK.filters={};deckView()}},'Remove')):''),
+    h('div',{class:'card'},h('div',{class:'row between'},h('h3',{},'Deck style'),h('span',{class:'small muted'},'Your pick is remembered')),styleGallery()),
     h('div',{class:'row between'},h('h3',{},'Slides'),h('div',{class:'row'},h('button',{class:'btn ghost sm',onclick:()=>{avail.forEach(s=>DK.picks.add(s.id));deckView()}},'Select all'),h('button',{class:'btn ghost sm',onclick:()=>{DK.picks.clear();DK.picks.add('title');deckView()}},'Clear'))),
     picks,
     DK.picks.has('next')?h('div',{class:'card'},h('div',{class:'row between'},h('h3',{},'Next steps slide'),h('button',{class:'btn ghost sm',onclick:()=>{DK.next=D.nextDefault;nextTa.value=DK.next}},'Reset to Nila\'s suggestion')),h('p',{class:'small muted'},'One line per bullet. Edit freely.'),nextTa):'',
-    h('div',{class:'deckbar'},cnt,h('span',{class:'small muted'},`${D.per} · ${({aurora:'Aurora',dark:'Eclipse',light:'Pearl'})[DK.style]} look`),h('span',{style:'flex:1'}),h('button',{class:'btn primary',onclick:ev=>buildDeck(ev.currentTarget)},h('span',{html:'<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>',style:'display:contents'}),'Download PowerPoint')))}
-function thumb(s,D){const light=DK.style!=='dark';const t=h('div',{class:'thumb'+(DK.style==='aurora'?' light aurora':light?' light':'')},h('span',{class:'moon'}),h('span',{class:'k'},s.name.toUpperCase()));
-  const bars=n=>h('div',{class:'bars'},Array.from({length:n},(_,i)=>h('i',{style:`height:${30+((i*37)%70)}%`})));
+    h('div',{class:'deckbar'},cnt,h('span',{class:'small muted'},`${D.per} · ${(DECK_STYLES.find(x=>x[0]===DK.style)||['',''])[1]} style`),h('span',{style:'flex:1'}),h('button',{class:'btn primary',onclick:ev=>buildDeck(ev.currentTarget)},h('span',{html:'<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>',style:'display:contents'}),'Download PowerPoint')))}
+function thumb(s,D){const C=DSTY[DK.style]||DSTY.aurora;const light=true;const t=h('div',{class:'thumb',style:`background:#${C.bg};color:#${C.ink}`},h('span',{class:'moon',style:C.decor?'display:none':''}),h('span',{class:'k',style:`color:#${C.gold}`},s.name.toUpperCase()));
+  const bars=n=>h('div',{class:'bars'},Array.from({length:n},(_,i)=>h('i',{style:`height:${30+((i*37)%70)}%;background:#${C.pal[i%2]}`})));
   if(s.art==='title')t.append(h('span',{class:'t',style:'margin-top:auto;font-size:.8rem'},s.id==='thanks'?'Thank you':(DK.title||'Review')),h('span',{style:'opacity:.7'},D.per));
-  else if(s.art==='kpi')t.append(h('span',{class:'t'},D.head),h('div',{style:'display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:auto'},D.kpis.map(k=>h('span',{style:`border-radius:3px;padding:3px;background:${light?'#F0F2F8':'#171B2E'}`},h('b',{style:'display:block;font-size:.55rem'},k.value),k.label.slice(0,10)))));
+  else if(s.art==='kpi')t.append(h('span',{class:'t'},D.head),h('div',{style:'display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:auto'},D.kpis.map(k=>h('span',{style:`border-radius:3px;padding:3px;background:#${C.cards?C.cards[0]:C.panel}`},h('b',{style:'display:block;font-size:.55rem'},k.value),k.label.slice(0,10)))));
   else if(s.art==='donut')t.append(h('span',{class:'t'},'Share by '+D.dimB),h('span',{style:'margin:auto;width:42%;aspect-ratio:1;border-radius:50%;background:conic-gradient(#8C9BFF 0 38%,#F2C46D 0 62%,#5DDB9E 0 80%,#FF8FA3 0 100%);-webkit-mask:radial-gradient(circle,transparent 45%,#000 46%);mask:radial-gradient(circle,transparent 45%,#000 46%)'}));
   else if(s.art==='line'||s.art==='fc')t.append(h('span',{class:'t'},s.art==='fc'?'Next 8 weeks':D.measure+' trend'),h('span',{style:'margin-top:auto',html:`<svg viewBox="0 0 100 34" style="width:100%"><path d="M0 28 L15 22 L30 25 L45 14 L60 17 L75 8 L100 5" fill="none" stroke="#F2C46D" stroke-width="2.4"/>${s.art==='fc'?'<path d="M75 8 L100 3" stroke="#8C9BFF" stroke-width="2" stroke-dasharray="3 2" fill="none"/>':'<path d="M0 30 L20 27 L40 26 L60 22 L80 19 L100 15" fill="none" stroke="#676E8C" stroke-width="1.4" stroke-dasharray="3 2"/>'}</svg>`}));
   else if(s.art==='deep')t.append(h('span',{class:'t'},D.deepList[0]?D.deepList[0].key:'Account'),bars(6));
   else if(s.art==='bullets')t.append(h('span',{class:'t'},'Next steps'),...(DK.next||'').split('\n').filter(Boolean).slice(0,3).map(x=>h('span',{},'• '+x.slice(0,40))));
-  else if(s.art==='table')t.append(h('span',{class:'t'},s.name),...[0,1,2,3].map(()=>h('span',{style:`height:5px;border-radius:2px;background:${light?'#E6E9F3':'#1E2338'}`})));
+  else if(s.art==='table')t.append(h('span',{class:'t'},s.name),...[0,1,2,3].map(()=>h('span',{style:`height:5px;border-radius:2px;background:#${C.panel2}`})));
   else t.append(h('span',{class:'t'},s.id==='top'?'Top 10 '+D.dimA:s.name),bars(s.art==='movers'?8:10));
   return t}
 
 /* ---------- PowerPoint ---------- */
-const DSTY={aurora:{bg:'FFFFFF',panel:'F7F4FF',panel2:'EEE8FF',ink:'1B1640',muted:'5F5A85',gold:'6D4AFF',line:'E6E0F8',good:'0E9F6E',bad:'E0245E',pal:['6D4AFF','FF5FA2','10B98A','FF9F5A','22A6E0','A855F7','F2B705','64748B'],prev:'C9C4E0',blobs:['7C5CFF','FF5FA2','FF9F5A']},
+const DSTY={
+  consult:{bg:'FFFFFF',panel:'F1F4F8',panel2:'E5EAF1',ink:'0E2240',muted:'5B6B82',gold:'0E7C86',line:'DCE3EC',good:'11865C',bad:'C0392B',pal:['0E2240','0E7C86','5B8DEF','E3A008','9B2C5B','6B7A90','2BB0A6','B0BCCB'],prev:'C5CEDA',
+    decor:(s,SH,t)=>{if(t){s.addShape(SH.rect,{x:0,y:0,w:0.38,h:7.5,fill:{color:'0E2240'},line:{color:'0E2240'}});s.addShape(SH.rect,{x:0.38,y:0,w:0.08,h:7.5,fill:{color:'0E7C86'},line:{color:'0E7C86'}})}else s.addShape(SH.rect,{x:0.42,y:0.72,w:0.07,h:0.58,fill:{color:'0E7C86'},line:{color:'0E7C86'}})}},
+  blocks:{bg:'FFE45C',panel:'FFFFFF',panel2:'FFF6C2',ink:'111111',muted:'3D3D3D',gold:'111111',line:'E8D24A',good:'0B7A3E',bad:'C62828',pal:['111111','FF5C39','3D5AFE','00A86B','8E24AA','F57C00','00838F','757575'],prev:'9E9E9E',font:'Arial',hfont:'Arial Black',
+    decor:(s,SH,t)=>{if(t){s.addShape(SH.rect,{x:8.9,y:0,w:4.43,h:7.5,fill:{color:'FF5C39'},line:{color:'FF5C39'}});s.addShape(SH.rect,{x:8.9,y:5.6,w:4.43,h:1.9,fill:{color:'111111'},line:{color:'111111'}})}else s.addShape(SH.rect,{x:12.33,y:0,w:1.0,h:0.55,fill:{color:'FF5C39'},line:{color:'FF5C39'}})}},
+  bento:{bg:'F4F4F1',panel:'FFFFFF',panel2:'ECECE6',ink:'191919',muted:'5A5A5A',gold:'FF6B4A',line:'E4E4DE',good:'1E9E5A',bad:'D9362F',pal:['191919','FF6B4A','22A06B','5B7CFF','F2B705','E05FA0','2BB3B3','8A8A84'],prev:'BDBDB5',cards:['FFE3EC','DFF3E4','E2E8FF','FFF3C9'],
+    decor:(s,SH,t)=>{if(t)[[9.0,0.6,3.6,2.9,'FFE3EC'],[9.0,3.7,1.7,3.2,'DFF3E4'],[10.9,3.7,1.7,1.5,'E2E8FF'],[10.9,5.4,1.7,1.5,'FFF3C9']].forEach(([x,y,w,hh,c])=>s.addShape(SH.roundRect,{x,y,w,h:hh,rectRadius:0.25,fill:{color:c},line:{color:c}}))}},
+  royal:{bg:'0B1530',panel:'111E40',panel2:'18295A',ink:'F5EEDC',muted:'A9B3CF',gold:'D4AF37',line:'2B3A66',good:'7FD1A3',bad:'F08A8A',pal:['D4AF37','7FA7FF','7FD1A3','E58FA0','9AD8F0','C5A3FF','F0A35E','A9B3CF'],prev:'4A5A8A',hfont:'Georgia',
+    decor:(s,SH,t)=>{s.addShape(SH.rect,{x:0.22,y:0.22,w:12.89,h:7.06,fill:{color:'0B1530',transparency:100},line:{color:'D4AF37',width:t?1.5:0.75,transparency:t?20:55}});if(t)s.addShape(SH.ellipse,{x:9.2,y:1.2,w:3.4,h:3.4,fill:{color:'D4AF37',transparency:85},line:{color:'D4AF37',transparency:40}})}},
+  mono:{bg:'FFFFFF',panel:'F2F2F2',panel2:'E6E6E6',ink:'000000',muted:'555555',gold:'E3061B',line:'DDDDDD',good:'1B7F3B',bad:'E3061B',pal:['000000','E3061B','6E6E6E','A8A8A8','2B2B2B','C4C4C4','8A8A8A','D0D0D0'],prev:'BBBBBB',font:'Arial',hfont:'Arial Black',
+    decor:(s,SH,t)=>{if(t){s.addShape(SH.rect,{x:0,y:0,w:0.28,h:7.5,fill:{color:'E3061B'},line:{color:'E3061B'}});s.addShape(SH.rect,{x:9.6,y:0,w:3.73,h:7.5,fill:{color:'000000'},line:{color:'000000'}})}else s.addShape(SH.rect,{x:12.53,y:0.42,w:0.2,h:0.2,fill:{color:'E3061B'},line:{color:'E3061B'}})}},
+  glass:{bg:'EEF3FB',panel:'FFFFFF',panel2:'E3ECFA',ink:'0F172A',muted:'475467',gold:'0A84FF',line:'D6E2F5',good:'12A150',bad:'E5383B',pal:['0A84FF','FF6FB5','30D158','FF9F0A','5AC8FA','5E5CE6','FFD60A','8E8E93'],prev:'B7C4D9',cardT:30,blobs:['9CC8FF','FFC8E6','B8F0DC'],blobT:[55,58,55],blobTT:[45,50,48,40]},
+  aurora:{bg:'FFFFFF',panel:'F7F4FF',panel2:'EEE8FF',ink:'1B1640',muted:'5F5A85',gold:'6D4AFF',line:'E6E0F8',good:'0E9F6E',bad:'E0245E',pal:['6D4AFF','FF5FA2','10B98A','FF9F5A','22A6E0','A855F7','F2B705','64748B'],prev:'C9C4E0',blobs:['7C5CFF','FF5FA2','FF9F5A']},
   dark:{bg:'0B0D18',panel:'161A2D',panel2:'1D2238',ink:'EEF0FA',muted:'9AA0BA',gold:'F2C46D',line:'2A3052',good:'5DDB9E',bad:'FF7A8A',pal:['8C9BFF','F2C46D','5DDB9E','FF8FA3','6FD6E8','C9A2FF','F59E62','A3B1C9'],prev:'5C6384'},
   light:{bg:'FFFFFF',panel:'F3F4F9',panel2:'E9EBF4',ink:'11142A',muted:'5A6080',gold:'B47A16',line:'DDE1EC',good:'16865A',bad:'C8344B',pal:['4B5BE0','D4952A','1E9E68','E0567A','1F9FB5','8B5CF6','E07A2F','6B7A99'],prev:'B5BACB'}};
-const FONT='Calibri',FONT_H='Calibri Light';
+let FONT='Calibri',FONT_T='Calibri';
 const barBox=(n,maxH,y)=>{const hh=Math.min(maxH,0.62*n+0.7);return{y:y+(maxH-hh)/2*0,h:hh}};
 function scaleOf(m,meas,vals){if(Studio.isRate(m,meas))return{div:1,unit:'',fmt:'0.0'};const mx=Math.max(...vals.map(v=>Math.abs(v||0)),0);const money=MONEY_RE.test(meas);
   if(mx>=1e7)return{div:1e7,unit:money?'₹ Cr':'Cr',fmt:'0.00'};if(mx>=1e5)return{div:1e5,unit:money?'₹ L':'L',fmt:'0.0'};if(mx>=1e4)return{div:1e3,unit:money?'₹ K':'K',fmt:'0.0'};return{div:1,unit:money?'₹':'',fmt:'#,##0'}}
 async function buildDeck(btn){if(typeof PptxGenJS==='undefined'){toast('PowerPoint tools are still loading. Try again in a moment.');return}if(!S.downloads){toast('Downloads are not available here');return}
   const old=btn.innerHTML;btn.disabled=true;btn.textContent='Building your deck…';
-  try{const D=await deckData();const C=DSTY[DK.style]||DSTY.dark;const p=new PptxGenJS();p.layout='LAYOUT_WIDE';p.author=S.settings.name||'Nila AI';p.company=S.settings.company||'';p.title=DK.title||'Review';
+  try{const D=await deckData();const C=DSTY[DK.style]||DSTY.aurora;FONT=C.font||'Calibri';FONT_T=C.hfont||FONT;const p=new PptxGenJS();p.layout='LAYOUT_WIDE';p.author=S.settings.name||'Nila AI';p.company=S.settings.company||'';p.title=DK.title||'Review';
     const SH=p.ShapeType;let page=0;const foot=[S.settings.company,S.settings.name].filter(Boolean).join(' · ');
     const base=(kicker,title,opts={})=>{const s=p.addSlide();page++;s.background={color:C.bg};
-      if(C.blobs){[[10.2,-2.2,4.4,C.blobs[0],88],[11.6,-1.4,3.4,C.blobs[1],86],[12.2,-0.4,2.2,C.blobs[2],82]].forEach(([x,y,w,c,t])=>s.addShape(SH.ellipse,{x,y,w,h:w,fill:{color:c,transparency:t},line:{color:c,transparency:100}}))}
+      if(C.decor)C.decor(s,SH,false);else if(C.blobs){const T=C.blobT||[88,86,82];[[10.2,-2.2,4.4,C.blobs[0],T[0]],[11.6,-1.4,3.4,C.blobs[1],T[1]],[12.2,-0.4,2.2,C.blobs[2],T[2]]].forEach(([x,y,w,c,t])=>s.addShape(SH.ellipse,{x,y,w,h:w,fill:{color:c,transparency:t},line:{color:c,transparency:100}}))}
       else{s.addShape(SH.ellipse,{x:10.9,y:-1.9,w:4.2,h:4.2,fill:{color:C.gold,transparency:90},line:{color:C.gold,transparency:100}});
       s.addShape(SH.ellipse,{x:11.7,y:-1.1,w:2.6,h:2.6,fill:{color:C.gold,transparency:84},line:{color:C.gold,transparency:100}})}
       if(kicker)s.addText(kicker.toUpperCase(),{x:0.6,y:0.38,w:9.5,h:0.3,fontFace:FONT,fontSize:10.5,bold:true,color:C.gold,charSpacing:3});
-      if(title)s.addText(title,{x:0.6,y:0.66,w:10.6,h:0.75,fontFace:FONT,fontSize:opts.titleSize||26,bold:true,color:C.ink,valign:'top',fit:'shrink'});
+      if(title)s.addText(title,{x:0.6,y:0.66,w:10.6,h:0.75,fontFace:FONT_T,fontSize:opts.titleSize||26,bold:true,color:C.ink,valign:'top',fit:'shrink'});
       s.addShape(SH.rect,{x:0.6,y:7.02,w:0.5,h:0.03,fill:{color:C.gold},line:{color:C.gold}});
       s.addText(`${foot}${foot?' · ':''}${D.per}`,{x:1.25,y:6.9,w:9,h:0.28,fontFace:FONT,fontSize:9,color:C.muted});
       s.addText(String(page),{x:12.1,y:6.9,w:0.6,h:0.28,fontFace:FONT,fontSize:9,color:C.muted,align:'right'});return s};
-    const card=(s,x,y,w,hh,label,value,sub,subColor)=>{s.addShape(SH.roundRect,{x,y,w,h:hh,rectRadius:0.12,fill:{color:C.panel},line:{color:C.line,width:0.75}});
+    const card=(s,x,y,w,hh,label,value,sub,subColor,ci=0)=>{s.addShape(SH.roundRect,{x,y,w,h:hh,rectRadius:0.12,fill:{color:C.cards?C.cards[ci%C.cards.length]:C.panel,transparency:C.cardT||0},line:{color:C.line,width:0.75}});
       s.addText(label.toUpperCase(),{x:x+0.2,y:y+0.14,w:w-0.4,h:0.28,fontFace:FONT,fontSize:9.5,bold:true,color:C.muted,charSpacing:1.5,fit:'shrink'});
       s.addText(value,{x:x+0.2,y:y+0.42,w:w-0.4,h:0.7,fontFace:FONT,fontSize:28,bold:true,color:C.ink,fit:'shrink'});
       if(sub)s.addText(sub,{x:x+0.2,y:y+hh-0.46,w:w-0.4,h:0.3,fontFace:FONT,fontSize:10.5,bold:true,color:subColor||C.muted})};
     const axis={catAxisLabelColor:C.muted,valAxisLabelColor:C.muted,catAxisLabelFontFace:FONT,valAxisLabelFontFace:FONT,catAxisLabelFontSize:10,valAxisLabelFontSize:10,valGridLine:{color:C.line,size:0.5},catGridLine:{style:'none'},catAxisLineShow:false,valAxisLineShow:false,legendColor:C.muted,legendFontFace:FONT,legendFontSize:10,plotArea:{fill:{color:C.bg}},chartArea:{fill:{color:C.bg}}};
     const deltaTxt=(d,bad)=>d==null?['vs previous: n/a',C.muted]:[`${d>=0?'▲':'▼'} ${Math.abs(d*100).toFixed(1)}% vs ${D.prevPer}`,(d>=0)!==!!bad?C.good:C.bad];
-    const sideNote=(s,lines,x=9.6,y=1.75,w=3.1)=>{s.addShape(SH.roundRect,{x,y,w,h:4.9,rectRadius:0.12,fill:{color:C.panel},line:{color:C.line,width:0.75}});let yy=y+0.25;for(const[l,v]of lines){s.addText(l.toUpperCase(),{x:x+0.25,y:yy,w:w-0.5,h:0.26,fontFace:FONT,fontSize:9,bold:true,color:C.muted,charSpacing:1.5});s.addText(v,{x:x+0.25,y:yy+0.26,w:w-0.5,h:0.5,fontFace:FONT,fontSize:18,bold:true,color:C.ink,fit:'shrink'});yy+=0.92}};
+    const sideNote=(s,lines,x=9.6,y=1.75,w=3.1)=>{s.addShape(SH.roundRect,{x,y,w,h:4.9,rectRadius:0.12,fill:{color:C.panel,transparency:C.cardT||0},line:{color:C.line,width:0.75}});let yy=y+0.25;for(const[l,v]of lines){s.addText(l.toUpperCase(),{x:x+0.25,y:yy,w:w-0.5,h:0.26,fontFace:FONT,fontSize:9,bold:true,color:C.muted,charSpacing:1.5});s.addText(v,{x:x+0.25,y:yy+0.26,w:w-0.5,h:0.5,fontFace:FONT,fontSize:18,bold:true,color:C.ink,fit:'shrink'});yy+=0.92}};
     const order=SLIDES.filter(s=>DK.picks.has(s.id)&&deckAvail(D,s.id));
     for(const sl of order){
       if(sl.id==='title'||sl.id==='thanks'){const s=p.addSlide();page++;s.background={color:C.bg};
-        if(C.blobs){[[6.8,-1.6,6.6,C.blobs[0],84],[9.4,0.4,5.2,C.blobs[1],82],[8.2,3.6,4.6,C.blobs[2],80],[10.4,1.6,2.6,C.blobs[1],70]].forEach(([x,y,w,c,t])=>s.addShape(SH.ellipse,{x,y,w,h:w,fill:{color:c,transparency:t},line:{color:c,transparency:100}}))}
+        if(C.decor)C.decor(s,SH,true);else if(C.blobs){const T=C.blobTT||[84,82,80,70];[[6.8,-1.6,6.6,C.blobs[0],T[0]],[9.4,0.4,5.2,C.blobs[1],T[1]],[8.2,3.6,4.6,C.blobs[2],T[2]],[10.4,1.6,2.6,C.blobs[1],T[3]]].forEach(([x,y,w,c,t])=>s.addShape(SH.ellipse,{x,y,w,h:w,fill:{color:c,transparency:t},line:{color:c,transparency:100}}))}
         else{s.addShape(SH.ellipse,{x:7.6,y:-0.9,w:7.6,h:7.6,fill:{color:C.gold,transparency:93},line:{color:C.gold,transparency:100}});
         s.addShape(SH.ellipse,{x:8.7,y:0.2,w:5.4,h:5.4,fill:{color:C.gold,transparency:86},line:{color:C.gold,transparency:100}});
         s.addShape(SH.ellipse,{x:9.9,y:1.4,w:3.0,h:3.0,fill:{color:C.gold,transparency:70},line:{color:C.gold,transparency:100}})}
         s.addText(`NILA AI · ${(S.settings.company||'').toUpperCase()}`,{x:0.8,y:1.6,w:8,h:0.35,fontFace:FONT,fontSize:12,bold:true,color:C.gold,charSpacing:4});
-        if(sl.id==='title'){s.addText(DK.title||'Business review',{x:0.8,y:2.1,w:8.2,h:1.9,fontFace:FONT,fontSize:40,bold:true,color:C.ink,valign:'top',fit:'shrink'});
+        if(sl.id==='title'){s.addText(DK.title||'Business review',{x:0.8,y:2.1,w:8.2,h:1.9,fontFace:FONT_T,fontSize:40,bold:true,color:C.ink,valign:'top',fit:'shrink'});
           s.addText(D.per+(DK.account?` · ${DK.account}`:''),{x:0.8,y:4.1,w:8,h:0.45,fontFace:FONT,fontSize:18,color:C.gold});
           s.addText([S.settings.name,S.settings.role].filter(Boolean).join(' · ')||' ',{x:0.8,y:5.9,w:8,h:0.35,fontFace:FONT,fontSize:13,color:C.muted});s.addText(prettyY(today()),{x:0.8,y:6.25,w:8,h:0.3,fontFace:FONT,fontSize:11,color:C.muted})}
-        else{s.addText('Thank you',{x:0.8,y:2.4,w:8,h:1.2,fontFace:FONT,fontSize:48,bold:true,color:C.ink});s.addText([S.settings.name,S.settings.role,S.settings.company].filter(Boolean).join(' · '),{x:0.8,y:3.7,w:8,h:0.4,fontFace:FONT,fontSize:16,color:C.gold})}
+        else{s.addText('Thank you',{x:0.8,y:2.4,w:8,h:1.2,fontFace:FONT_T,fontSize:48,bold:true,color:C.ink});s.addText([S.settings.name,S.settings.role,S.settings.company].filter(Boolean).join(' · '),{x:0.8,y:3.7,w:8,h:0.4,fontFace:FONT,fontSize:16,color:C.gold})}
         continue}
       if(sl.id==='summary'){const s=base('Executive summary',D.head+(DK.account?` · ${DK.account}`:''));const n=D.kpis.length||1;const w=(12.1-(n-1)*0.25)/n;
-        D.kpis.forEach((k,i)=>{const[t,c]=deltaTxt(k.delta,k.bad);card(s,0.6+i*(w+0.25),1.7,w,1.75,k.label,k.value,t,c)});
+        D.kpis.forEach((k,i)=>{const[t,c]=deltaTxt(k.delta,k.bad);card(s,0.6+i*(w+0.25),1.7,w,1.75,k.label,k.value,t,c,i)});
         if(D.ins.length)s.addText(D.ins.slice(0,4).map(x=>({text:x,options:{bullet:{code:'25CF',indent:18},breakLine:true,paraSpaceAfter:8}})),{x:0.6,y:3.75,w:12.1,h:2.9,fontFace:FONT,fontSize:15,color:C.ink,valign:'top'});continue}
       if(sl.id==='trend'){const s=base('Trend',`${D.measure} by ${D.gran}`);const sc=scaleOf(D.m,D.measure,[...D.s1.map(x=>x.v),...(D.s0||[])]);const labels=D.s1.map(x=>pretty(x.k));
         const data=[{name:'This period',labels,values:D.s1.map(x=>x.v==null?null:+(x.v/sc.div).toFixed(2))}];if(D.s0)data.push({name:'Previous period',labels,values:D.s0.map(v=>v==null?null:+(v/sc.div).toFixed(2))});
@@ -157,7 +170,7 @@ async function buildDeck(btn){if(typeof PptxGenJS==='undefined'){toast('PowerPoi
         s.addChart(p.ChartType.bar,[{name:D.measure,labels:D.weekday.map(x=>x.key),values:D.weekday.map(x=>+((x.v||0)/sc.div).toFixed(2))}],{x:0.5,y:1.6,w:8.9,h:5.1,...axis,barDir:'col',chartColors:[C.pal[0]],showValue:true,dataLabelColor:C.ink,dataLabelFormatCode:sc.fmt,valAxisHidden:true,valGridLine:{style:'none'},showLegend:false,barGapWidthPct:40});
         sideNote(s,[['Best day',best.key],['Best day avg',D.F(D.measure,best.v)],['Weekend vs weekday',(()=>{const we=(D.weekday[4].v+D.weekday[5].v+D.weekday[6].v)/3,wd=(D.weekday[0].v+D.weekday[1].v+D.weekday[2].v+D.weekday[3].v)/4;return wd?`${we>=wd?'+':''}${((we/wd-1)*100).toFixed(0)}%`:'–'})()],['Unit',sc.unit||'as is']]);continue}
       if(sl.id==='deep'){for(const a of D.deepList){const s=base(`Account deep-dive · #${a.rank}`,a.key);const[t,c]=deltaTxt(a.delta);
-          card(s,0.6,1.6,2.9,1.55,D.measure,D.F(D.measure,a.v),t.split(' vs')[0],c);card(s,3.7,1.6,2.9,1.55,'Share of total',a.share==null?'–':(a.share*100).toFixed(1)+'%','Rank #'+a.rank);if(a.second)card(s,6.8,1.6,2.9,1.55,a.second.label,a.second.value,'');
+          card(s,0.6,1.6,2.9,1.55,D.measure,D.F(D.measure,a.v),t.split(' vs')[0],c,0);card(s,3.7,1.6,2.9,1.55,'Share of total',a.share==null?'–':(a.share*100).toFixed(1)+'%','Rank #'+a.rank,null,1);if(a.second)card(s,6.8,1.6,2.9,1.55,a.second.label,a.second.value,'',null,2);
           if(a.weeks.length>1){const sc=scaleOf(D.m,D.measure,a.weeks.map(x=>x.v));s.addChart(p.ChartType.line,[{name:'Weekly',labels:a.weeks.map(x=>pretty(x.k)),values:a.weeks.map(x=>x.v==null?null:+(x.v/sc.div).toFixed(2))}],{x:0.5,y:3.35,w:6.4,h:3.4,...axis,chartColors:[C.gold],lineSize:3,lineDataSymbol:'circle',lineDataSymbolSize:5,showLegend:false,valAxisLabelFormatCode:sc.fmt,showTitle:true,title:`Weekly ${D.measure}${sc.unit?' ('+sc.unit+')':''}`,titleColor:C.muted,titleFontSize:11,titleFontFace:FONT})}
           if(a.split.length){const sc=scaleOf(D.m,D.measure,a.split.map(x=>x.v));s.addChart(p.ChartType.bar,[{name:D.dimB,labels:a.split.map(x=>x.key),values:a.split.map(x=>+((x.v||0)/sc.div).toFixed(2))}],{x:7.1,y:3.35,w:5.7,h:Math.max(1.6,barBox(a.split.length,3.4,3.35).h),...axis,barDir:'bar',catAxisOrientation:'maxMin',chartColors:[C.pal[0]],showValue:true,dataLabelColor:C.ink,dataLabelFormatCode:sc.fmt,valAxisHidden:true,valGridLine:{style:'none'},showLegend:false,showTitle:true,title:`By ${D.dimB}${sc.unit?' ('+sc.unit+')':''}`,titleColor:C.muted,titleFontSize:11,titleFontFace:FONT})}}continue}
       if(sl.id==='forecast'){if(!D.fc||D.fc.error){const s=base('Outlook','Forecast needs more history');s.addText(D.fc&&D.fc.error||'Upload at least 4 weeks of data.',{x:0.6,y:1.8,w:11,h:0.6,fontFace:FONT,fontSize:16,color:C.muted});continue}
@@ -182,3 +195,16 @@ async function buildDeck(btn){if(typeof PptxGenJS==='undefined'){toast('PowerPoi
   finally{btn.disabled=false;btn.innerHTML=old}}
 
 (window.NILA_VIEWS=window.NILA_VIEWS||{}).deck=()=>{deckView().catch(e=>{console.error(e);$('#view-deck').replaceChildren(h('div',{class:'banner'},'Could not open Deck Builder: '+(e.message||e)))})};
+
+const DECK_STYLES=[['aurora','Aurora'],['consult','Consulting Clean'],['glass','Liquid Glass'],['blocks','Bold Blocks'],['bento','Bento Grid'],['royal','Royal Navy & Gold'],['mono','Minimal Mono'],['dark','Eclipse Gold'],['light','Pearl']];
+function stylePreview(k){const C=DSTY[k];const el=h('div',{class:'ds-prev',style:`background:#${C.bg};color:#${C.ink}`});
+  if(C.blobs)C.blobs.forEach((c,i)=>el.append(h('span',{class:'blob',style:`width:${[60,46,34][i]}%;aspect-ratio:1;right:${[-14,-4,4][i]}%;top:${[-40,-22,-6][i]}%;background:#${c};opacity:${C.blobT?.6:.28}`})));
+  if(k==='dark')el.append(h('span',{class:'blob',style:'width:46%;aspect-ratio:1;right:-10%;top:-30%;background:radial-gradient(circle,rgba(242,196,109,.45),transparent 70%)'}));
+  if(k==='consult')el.append(h('span',{style:'position:absolute;left:6%;top:34%;width:2px;height:16%;background:#0E7C86'}));
+  if(k==='blocks')el.append(h('span',{style:'position:absolute;right:0;top:0;bottom:0;width:30%;background:#FF5C39;z-index:-1'}));
+  if(k==='royal')el.append(h('span',{style:'position:absolute;inset:5%;border:1px solid rgba(212,175,55,.6);border-radius:3px;z-index:-1'}));
+  if(k==='mono')el.append(h('span',{style:'position:absolute;right:6%;top:9%;width:5px;height:5px;background:#E3061B'}));
+  el.append(h('span',{class:'k',style:`color:#${C.gold}`},'Executive summary'),h('span',{class:'t',style:`font-family:${k==='royal'?'Georgia,serif':k==='blocks'||k==='mono'?'Arial Black,Arial,sans-serif':'inherit'}`},'GMV up 7.7%'),h('div',{class:'bars'},[45,70,55,88,62,96].map((v,i)=>h('i',{style:`height:${v}%;background:#${k==='bento'?(i%2?'FF6B4A':'191919'):C.pal[i%3===2?1:0]}`}))));
+  if(k==='bento'){el.querySelector('.bars').style.cssText='background:#FFF3C9;border-radius:5px;padding:3px'}
+  return el}
+function styleGallery(){const box=h('div',{class:'dgal'},DECK_STYLES.map(([k,l])=>h('button',{type:'button','aria-pressed':String(DK.style===k),onclick:()=>{DK.style=k;try{localStorage.setItem('nila.deckstyle',JSON.stringify(k))}catch(e){}deckView()}},stylePreview(k),h('span',{class:'nm'},l))));return box}
