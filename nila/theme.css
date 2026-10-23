@@ -792,3 +792,9 @@ body{background:transparent}
 .ds-prev .bars{flex:1;display:flex;align-items:flex-end;gap:2px}
 .ds-prev .bars i{flex:1;border-radius:1px 1px 0 0}
 .ds-prev .blob{position:absolute;border-radius:50%;z-index:-1}
+/* phone drawer: always a solid frosted panel, never see-through */
+@media (max-width:899px){
+  html body .side{background:var(--surface-solid)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border-right:1px solid var(--line);box-shadow:0 0 60px rgba(0,0,0,.35)}
+  html body .side .nav[aria-current="true"]{background:var(--teal-soft)}
+  .scrim{background:rgba(10,8,30,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+}

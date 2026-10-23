@@ -30,7 +30,7 @@ import java.util.ArrayList;
 public class MainActivity extends Activity {
     static final String HOME = "https://wealthos747-lgtm.github.io/wealthos-site/nila/";
     static final String HOST = "wealthos747-lgtm.github.io";
-    static final int REQ_FILE = 11, REQ_VOICE = 12;
+    static final int REQ_FILE = 11, REQ_VOICE = 12, APP_VER = 4;
     WebView web;
     ValueCallback<Uri[]> fileCb;
 
@@ -66,6 +66,8 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+        android.content.SharedPreferences pref = getSharedPreferences("nila", MODE_PRIVATE);
+        if (pref.getInt("appVer", 0) != APP_VER) { web.clearCache(true); pref.edit().putInt("appVer", APP_VER).apply(); }
         if (b != null) web.restoreState(b); else web.loadUrl(HOME);
     }
 
