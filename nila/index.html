@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Geist:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Serif+Display&family=DM+Sans:wght@400;500;700&family=Chakra+Petch:wght@500;600;700&family=Archivo:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="theme.css?v=23">
+<link rel="stylesheet" href="theme.css?v=24">
 <script>(function(){var t='aurora';try{t=JSON.parse(localStorage.getItem('nila.theme2'))||'aurora'}catch(e){}if(t==='auto')t=window.matchMedia('(prefers-color-scheme: dark)').matches?'nebula':'liquid';document.documentElement.dataset.theme=t})()</script>
 
 </head>
@@ -294,7 +294,7 @@
 <script src="vendor/pptxgen.bundle.js" defer></script>
 <script src="vendor/marked.min.js"></script>
 <script src="vendor/purify.min.js"></script>
-<script src="runtime.js?v=23"></script>
+<script src="runtime.js?v=24"></script>
 
 <script>
 /* ================= ENGINE: pure calculations (no page access) ================= */
@@ -584,13 +584,49 @@ async function readFile(file,box,spaceId){
   if(pending&&pending.box&&pending.box!==box)pending.box.replaceChildren();
   if(typeof XLSX==='undefined'){toast('The spreadsheet reader did not load. Reload the page.');return}
   box.replaceChildren(h('div',{class:'card'},dots('Reading '+file.name+'…')));
-  try{const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});pending={file:file.name,wb,sheet:wb.SheetNames[0],box,space:spaceId};prepareSheet()}
+  try{const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});pending={file:file.name,wb,sheet:wb.SheetNames[0],box,space:spaceId};const used=wb.SheetNames.filter(n=>sheetTable(wb,n).rows.length);if(used.length>1)renderMulti();else{if(used[0])pending.sheet=used[0];prepareSheet()}}
   catch(e){box.replaceChildren(h('div',{class:'banner'},'Could not read this file. Save it as .csv or .xlsx and upload again.'))}}
-function prepareSheet(){pending.t=cleanTable(XLSX.utils.sheet_to_json(pending.wb.Sheets[pending.sheet],{defval:null,raw:true}));renderImport()}
+/* read one sheet, finding the real header row even when the sheet starts with titles or blank lines */
+function sheetTable(wb,name){wb._cache=wb._cache||{};if(wb._cache[name])return wb._cache[name];const ws=wb.Sheets[name];if(!ws||!ws['!ref']){return wb._cache[name]={cols:[],types:{},rows:[]}}
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true,blankrows:false});
+  const filled=r=>(r||[]).filter(v=>v!=null&&String(v).trim()!=='').length;const maxW=Math.max(0,...aoa.slice(0,40).map(filled));
+  let hi=0;for(let i=0;i<Math.min(aoa.length,20);i++){const r=aoa[i]||[];const f=filled(r);const txt=r.filter(v=>typeof v==='string'&&v.trim()).length;if(f>=Math.max(2,Math.ceil(maxW*.6))&&txt>=Math.ceil(f*.6)){hi=i;break}}
+  const head=(aoa[hi]||[]).map((v,i)=>v==null||String(v).trim()===''?'Column '+(i+1):String(v).trim());const seen={};const names=head.map(n=>{seen[n]=(seen[n]||0)+1;return seen[n]>1?n+' '+seen[n]:n});
+  const objs=[];for(const r of aoa.slice(hi+1)){if(!filled(r))continue;const first=String((r||[])[0]??'').trim().toLowerCase();if(/^(grand )?total$/.test(first))continue;const o={};names.forEach((n,i)=>o[n]=r[i]===undefined?null:r[i]);objs.push(o)}
+  return wb._cache[name]=cleanTable(objs)}
+function prepareSheet(){pending.t=sheetTable(pending.wb,pending.sheet);renderImport()}
+const baseOf=f=>f.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\s+\d{4}[-_ ]?\d{2}[-_ ]?\d{2}.*$/,'').trim();
+function matchFor(name,cols){const real=S.datasets.filter(d=>!d.demo);return real.find(d=>fullN(d.name)===fullN(name))||real.find(d=>d.columns.join('|')===cols.join('|'))}
+function guessType(name,cols){const t=(name+' '+cols.join(' ')).toLowerCase();const map=[[/red ?deal|offer|discount|coupon/,'Red Deal / offers revenue'],[/\blqs\b|quality score|listing quality/,'LQS / quality score'],[/\byb\b|\bbc\b|your ?bus/,'YB / BC'],[/kam|key account/,'KAM dashboard'],[/service|complaint|ticket status/,'Service information'],[/cancel|refund/,'Cancellations / refunds'],[/rating|review/,'Ratings / reviews'],[/target|plan|budget/,'Targets / plan'],[/spend|campaign|marketing|roas/,'Marketing spend / campaigns'],[/settle|payout|payment/,'Settlements / payments'],[/route/,'Route performance'],[/product|revenue/,'Revenue / products'],[/booking|seat|ticket|sales/,'Bookings / sales'],[/operator|travels/,'Operator performance']];for(const[re,tp]of map)if(re.test(t))return tp;return'Other'}
+function renderMulti(){const p=pending,box=p.box,base=baseOf(p.file);
+  const items=p.wb.SheetNames.map(n=>{const t=sheetTable(p.wb,n);return{n,t,on:t.rows.length>0}});
+  const sig=t=>t.cols.join('|');const groups={};items.filter(x=>x.t.rows.length).forEach(x=>(groups[sig(x.t)]=groups[sig(x.t)]||[]).push(x.n));const canCombine=Object.values(groups).some(g=>g.length>1);
+  const comb=h('input',{type:'checkbox',id:'imComb'});
+  const rows=items.map(x=>{const t=x.t;const dc=guessDateCol(t.cols,t.types);const ds=dc?t.rows.map(r=>r[dc]).filter(Boolean).sort():[];const nm=`${base} · ${x.n}`;const m=t.rows.length?matchFor(nm,t.cols):null;
+    x.cb=h('input',{type:'checkbox',checked:x.on,disabled:!t.rows.length});x.name=h('input',{type:'text',value:m?m.name:nm});const gt=m&&m.type||guessType(x.n+' '+p.file,t.cols);x.type=h('select',{},DS_TYPES.map(y=>h('option',{selected:gt===y},y)));
+    return h('div',{class:'card',style:'padding:12px;gap:8px'},h('div',{class:'row between'},h('label',{class:'toggle',style:'font-weight:700;color:var(--fg);font-size:.92rem'},x.cb,x.n),t.rows.length?h('span',{class:'chip teal'},`${nf.format(t.rows.length)} rows · ${t.cols.length} cols`):h('span',{class:'chip'},'Empty sheet')),
+      t.rows.length?h('div',{class:'grid2'},h('label',{class:'field'},h('span',{},'Report name'),x.name),h('label',{class:'field'},h('span',{},'Report type'),x.type)):'',
+      t.rows.length?h('p',{class:'small muted'},m?h('span',{class:'chip violet'},'Updates "'+m.name+'"'):h('span',{class:'chip good'},'New report'),' ',ds.length?`Dates ${prettyY(ds[0])} → ${prettyY(ds.at(-1))}`:'No date column',' · ',h('span',{class:'mono'},t.cols.slice(0,6).join(', ')+(t.cols.length>6?' …':''))):'')});
+  box.replaceChildren(h('div',{class:'card'},
+    h('div',{class:'row between'},h('h3',{},`${p.file} has ${items.length} sheets`),h('span',{class:'small muted'},'Each sheet becomes its own report')),
+    canCombine?h('label',{class:'toggle',style:'color:var(--fg)'},comb,'Combine sheets that have the same columns into one report (e.g. one sheet per month)'):'',
+    h('div',{class:'view',style:'gap:10px;animation:none'},rows),
+    h('div',{class:'row'},h('button',{class:'btn primary',id:'imAll',onclick:()=>importMany(items,comb.checked)},'Import selected sheets'),h('button',{class:'btn',onclick:()=>{const f=items.find(x=>x.cb.checked)||items[0];pending.sheet=f.n;prepareSheet()}},'Check one sheet in detail'),h('button',{class:'btn ghost',onclick:()=>{pending=null;box.replaceChildren()}},'Cancel'))))}
+async function importMany(items,combine){const p=pending;const btn=$('#imAll');const sel=items.filter(x=>x.cb.checked&&x.t.rows.length);if(!sel.length){toast('Pick at least one sheet');return}
+  btn.disabled=true;let jobs=sel.map(x=>({name:x.name.value.trim()||`${baseOf(p.file)} · ${x.n}`,type:x.type.value,t:x.t,sheets:[x.n]}));
+  if(combine){const by={};for(const j of jobs){const k=j.t.cols.join('|');if(by[k]){by[k].t={cols:j.t.cols,types:{...by[k].t.types,...j.t.types},rows:by[k].t.rows.concat(j.t.rows)};by[k].sheets.push(...j.sheets)}else by[k]={...j,t:{...j.t,rows:j.t.rows.slice()}}}
+    jobs=Object.values(by).map(j=>j.sheets.length>1?{...j,name:`${baseOf(p.file)} · ${j.sheets.length} sheets`}:j)}
+  if(S.demo)clearDemo(true);const done=[];
+  try{for(const [i,j] of jobs.entries()){btn.textContent=`Saving ${i+1} of ${jobs.length}…`;const t=j.t;const meta={type:j.type,operatorCol:guessOpCol(t.cols,t.types,t.rows),dateCol:guessDateCol(t.cols,t.types),note:j.sheets.length>1?'Sheets: '+j.sheets.join(', '):'Sheet: '+j.sheets[0],space:p.space||''};
+      const ex=matchFor(j.name,t.cols);let rows=t.rows,cols=t.cols,types={...t.types};
+      if(ex){const old=await loadRows(ex);cols=[...ex.columns];for(const c of t.cols)if(!cols.includes(c))cols.push(c);types={...ex.types,...t.types};const dc=meta.dateCol&&ex.dateCol?meta.dateCol:'';if(dc){const nd=t.rows.map(r=>r[dc]).filter(Boolean).sort();const lo=nd[0],hi=nd.at(-1);rows=lo?old.filter(r=>{const d=r[ex.dateCol];return!(d&&d>=lo&&d<=hi)}).concat(t.rows):old.concat(t.rows)}else rows=old.concat(t.rows);meta.type=ex.type||meta.type;meta.note=ex.note||meta.note;meta.space=ex.space||meta.space;if(ex.operatorCol)meta.operatorCol=ex.operatorCol;if(ex.dateCol)meta.dateCol=ex.dateCol}
+      const id=ex?ex.id:newId();const ds=await writeDataset(id,{name:ex?ex.name:j.name,...meta,columns:cols,types},rows,ex,p.file+' / '+j.sheets.join(', '),t.rows.length);S.rows[id]=rows;S.datasets=[ds,...S.datasets.filter(d=>d.id!==id)];done.push(`${ds.name} (${nf.format(rows.length)} rows${ex?', updated':''})`)}
+    p.box.replaceChildren(h('div',{class:'banner ok',style:'flex-direction:column;align-items:flex-start'},h('b',{},`Imported ${done.length} report${done.length>1?'s':''} from ${p.file}`),...done.map(x=>h('span',{},'• '+x)),h('span',{class:'small'},'Check the operator and date columns in Data library → Edit details if anything looks off.')));pending=null;S.gapsScanned=false;renderAll();computeMovers()}
+  catch(e){console.error(e);toast(e&&e.code?dbErr(e):'Could not save. Try again.');btn.disabled=false;btn.textContent='Import selected sheets'}}
 function renderImport(){
   const p=pending,t=p.t,box=p.box;
   if(!t.rows.length){box.replaceChildren(h('div',{class:'banner'},'This sheet has no rows. Pick another sheet or check the file.'),p.wb.SheetNames.length>1?sheetPicker():'');return}
-  const baseName=p.file.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\s+\d{4}[-_ ]?\d{2}[-_ ]?\d{2}.*$/,'').trim();
+  const baseName=baseOf(p.file)+(p.wb.SheetNames.length>1?' · '+p.sheet:'');
   const real=S.datasets.filter(d=>!d.demo);
   const match=real.find(d=>fullN(d.name)===fullN(baseName)||d.columns.join('|')===t.cols.join('|'));
   const opCol=guessOpCol(t.cols,t.types,t.rows),dateCol=guessDateCol(t.cols,t.types);
@@ -614,7 +650,7 @@ function renderImport(){
     dates.length?h('p',{class:'small muted'},'Dates in file: ',h('span',{class:'mono'},prettyY(dates[0]),' → ',prettyY(dates[dates.length-1]))):h('p',{class:'small muted'},'No date column found. Trends, forecasts and period comparisons need one.'),
     previewTable(t.cols,t.types,t.rows.slice(0,6)),
     h('div',{class:'row'},h('button',{class:'btn primary',id:'imSave',onclick:doImport},'Save report'),h('button',{class:'btn ghost',onclick:()=>{pending=null;box.replaceChildren()}},'Cancel'))))}
-function sheetPicker(){const s=h('select',{},pending.wb.SheetNames.map(n=>h('option',{selected:n===pending.sheet},n)));s.onchange=()=>{pending.sheet=s.value;prepareSheet()};return h('label',{class:'field inline'},h('span',{},'Sheet'),s)}
+function sheetPicker(){const s=h('select',{},pending.wb.SheetNames.map(n=>h('option',{selected:n===pending.sheet},n)));s.onchange=()=>{pending.sheet=s.value;prepareSheet()};return h('div',{class:'row'},h('label',{class:'field inline'},h('span',{},'Sheet'),s),h('button',{class:'btn sm',type:'button',onclick:renderMulti},`Import all ${pending.wb.SheetNames.length} sheets`))}
 function previewTable(cols,types,rows){return tbl(cols.map(c=>c+(types[c]==='number'?' #':types[c]==='date'?' ◷':'')),rows.map(r=>cols.map(c=>fmt(r[c]))),cols.map((c,i)=>types[c]==='number'?i:-1).filter(i=>i>=0))}
 async function doImport(){
   const btn=$('#imSave');btn.disabled=true;btn.textContent='Saving…';
@@ -1422,10 +1458,10 @@ async function restoreBackup(file){let data;try{data=JSON.parse(await file.text(
 
 document.addEventListener('DOMContentLoaded',boot);
 </script>
-<script src="studio.js?v=23"></script>
-<script src="deck.js?v=23"></script>
-<script src="guide.js?v=23"></script>
-<script src="sync.js?v=23"></script>
+<script src="studio.js?v=24"></script>
+<script src="deck.js?v=24"></script>
+<script src="guide.js?v=24"></script>
+<script src="sync.js?v=24"></script>
 
 </body>
 </html>
