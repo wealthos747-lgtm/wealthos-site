@@ -15,7 +15,7 @@ const SLIDES=[
   {id:'actions',name:'Action plan',desc:'Open follow-ups with owner and due date',on:false,art:'table',need:'actions'},
   {id:'next',name:'Next steps',desc:'Your asks and plan, written by you (Nila suggests)',on:true,art:'bullets'},
   {id:'thanks',name:'Thank you',desc:'Closing slide',on:true,art:'title'}];
-const DK={dsId:null,range:'30',from:'',to:'',account:'',measure:'',dimA:'',dimB:'',style:'dark',title:'',picks:new Set(SLIDES.filter(s=>s.on).map(s=>s.id)),deepN:5,next:'',filters:{}};
+const DK={dsId:null,range:'30',from:'',to:'',account:'',measure:'',dimA:'',dimB:'',style:'aurora',title:'',picks:new Set(SLIDES.filter(s=>s.on).map(s=>s.id)),deepN:5,next:'',filters:{}};
 
 async function deckData(){const ds=dsById(DK.dsId);const m=(typeof ST!=='undefined'&&ST.m&&ST.m.ds===ds)?ST.m:await Studio.model(ds);
   const measure=m.measures.includes(DK.measure)?DK.measure:Studio.pickMeasures(m)[0];const dims=Studio.pickDims(m);const dimA=m.dims.includes(DK.dimA)?DK.dimA:dims[0]||'';const dimB=m.dims.includes(DK.dimB)?DK.dimB:(dims.find(d=>d!==dimA)||'');
@@ -71,14 +71,14 @@ async function deckView(){const v=$('#view-deck');if(!v)return;
       DK.dimB?h('label',{class:'field'},h('span',{},'Mix by'),sel(m.dims,DK.dimB,x=>DK.dimB=x)):'',
       DK.dimA?h('label',{class:'field'},h('span',{},'For one '+DK.dimA.toLowerCase()+' only'),sel(accs,DK.account,x=>{DK.account=x;DK.next='';DK.title=''},'All')):'',
       h('label',{class:'field'},h('span',{},'Deep-dives'),sel([['3','Top 3'],['5','Top 5'],['8','Top 8'],['10','Top 10']],String(DK.deepN),x=>DK.deepN=Number(x))),
-      h('label',{class:'field'},h('span',{},'Look'),sel([['dark','Eclipse (dark, premium)'],['light','Pearl (light, print friendly)']],DK.style,x=>DK.style=x))),
+      h('label',{class:'field'},h('span',{},'Look'),sel([['aurora','Aurora (light glass)'],['dark','Eclipse (dark, premium)'],['light','Pearl (plain, print friendly)']],DK.style,x=>DK.style=x))),
       h('label',{class:'field'},h('span',{},'Deck title'),title),
       Object.keys(DK.filters||{}).length?h('p',{class:'small muted'},'Using Studio filters: ',Object.entries(DK.filters).map(([k,v])=>`${k}: ${v.join(', ')}`).join(' · '),' ',h('button',{class:'btn ghost sm',onclick:()=>{DK.filters={};deckView()}},'Remove')):''),
     h('div',{class:'row between'},h('h3',{},'Slides'),h('div',{class:'row'},h('button',{class:'btn ghost sm',onclick:()=>{avail.forEach(s=>DK.picks.add(s.id));deckView()}},'Select all'),h('button',{class:'btn ghost sm',onclick:()=>{DK.picks.clear();DK.picks.add('title');deckView()}},'Clear'))),
     picks,
     DK.picks.has('next')?h('div',{class:'card'},h('div',{class:'row between'},h('h3',{},'Next steps slide'),h('button',{class:'btn ghost sm',onclick:()=>{DK.next=D.nextDefault;nextTa.value=DK.next}},'Reset to Nila\'s suggestion')),h('p',{class:'small muted'},'One line per bullet. Edit freely.'),nextTa):'',
-    h('div',{class:'deckbar'},cnt,h('span',{class:'small muted'},`${D.per} · ${DK.style==='dark'?'Eclipse':'Pearl'} look`),h('span',{style:'flex:1'}),h('button',{class:'btn primary',onclick:ev=>buildDeck(ev.currentTarget)},h('span',{html:'<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>',style:'display:contents'}),'Download PowerPoint')))}
-function thumb(s,D){const light=DK.style==='light';const t=h('div',{class:'thumb'+(light?' light':'')},h('span',{class:'moon'}),h('span',{class:'k'},s.name.toUpperCase()));
+    h('div',{class:'deckbar'},cnt,h('span',{class:'small muted'},`${D.per} · ${({aurora:'Aurora',dark:'Eclipse',light:'Pearl'})[DK.style]} look`),h('span',{style:'flex:1'}),h('button',{class:'btn primary',onclick:ev=>buildDeck(ev.currentTarget)},h('span',{html:'<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>',style:'display:contents'}),'Download PowerPoint')))}
+function thumb(s,D){const light=DK.style!=='dark';const t=h('div',{class:'thumb'+(DK.style==='aurora'?' light aurora':light?' light':'')},h('span',{class:'moon'}),h('span',{class:'k'},s.name.toUpperCase()));
   const bars=n=>h('div',{class:'bars'},Array.from({length:n},(_,i)=>h('i',{style:`height:${30+((i*37)%70)}%`})));
   if(s.art==='title')t.append(h('span',{class:'t',style:'margin-top:auto;font-size:.8rem'},s.id==='thanks'?'Thank you':(DK.title||'Review')),h('span',{style:'opacity:.7'},D.per));
   else if(s.art==='kpi')t.append(h('span',{class:'t'},D.head),h('div',{style:'display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:auto'},D.kpis.map(k=>h('span',{style:`border-radius:3px;padding:3px;background:${light?'#F0F2F8':'#171B2E'}`},h('b',{style:'display:block;font-size:.55rem'},k.value),k.label.slice(0,10)))));
@@ -91,7 +91,8 @@ function thumb(s,D){const light=DK.style==='light';const t=h('div',{class:'thumb
   return t}
 
 /* ---------- PowerPoint ---------- */
-const DSTY={dark:{bg:'0B0D18',panel:'161A2D',panel2:'1D2238',ink:'EEF0FA',muted:'9AA0BA',gold:'F2C46D',line:'2A3052',good:'5DDB9E',bad:'FF7A8A',pal:['8C9BFF','F2C46D','5DDB9E','FF8FA3','6FD6E8','C9A2FF','F59E62','A3B1C9'],prev:'5C6384'},
+const DSTY={aurora:{bg:'FFFFFF',panel:'F7F4FF',panel2:'EEE8FF',ink:'1B1640',muted:'5F5A85',gold:'6D4AFF',line:'E6E0F8',good:'0E9F6E',bad:'E0245E',pal:['6D4AFF','FF5FA2','10B98A','FF9F5A','22A6E0','A855F7','F2B705','64748B'],prev:'C9C4E0',blobs:['7C5CFF','FF5FA2','FF9F5A']},
+  dark:{bg:'0B0D18',panel:'161A2D',panel2:'1D2238',ink:'EEF0FA',muted:'9AA0BA',gold:'F2C46D',line:'2A3052',good:'5DDB9E',bad:'FF7A8A',pal:['8C9BFF','F2C46D','5DDB9E','FF8FA3','6FD6E8','C9A2FF','F59E62','A3B1C9'],prev:'5C6384'},
   light:{bg:'FFFFFF',panel:'F3F4F9',panel2:'E9EBF4',ink:'11142A',muted:'5A6080',gold:'B47A16',line:'DDE1EC',good:'16865A',bad:'C8344B',pal:['4B5BE0','D4952A','1E9E68','E0567A','1F9FB5','8B5CF6','E07A2F','6B7A99'],prev:'B5BACB'}};
 const FONT='Calibri',FONT_H='Calibri Light';
 const barBox=(n,maxH,y)=>{const hh=Math.min(maxH,0.62*n+0.7);return{y:y+(maxH-hh)/2*0,h:hh}};
@@ -102,8 +103,9 @@ async function buildDeck(btn){if(typeof PptxGenJS==='undefined'){toast('PowerPoi
   try{const D=await deckData();const C=DSTY[DK.style]||DSTY.dark;const p=new PptxGenJS();p.layout='LAYOUT_WIDE';p.author=S.settings.name||'Nila AI';p.company=S.settings.company||'';p.title=DK.title||'Review';
     const SH=p.ShapeType;let page=0;const foot=[S.settings.company,S.settings.name].filter(Boolean).join(' · ');
     const base=(kicker,title,opts={})=>{const s=p.addSlide();page++;s.background={color:C.bg};
-      s.addShape(SH.ellipse,{x:10.9,y:-1.9,w:4.2,h:4.2,fill:{color:C.gold,transparency:90},line:{color:C.gold,transparency:100}});
-      s.addShape(SH.ellipse,{x:11.7,y:-1.1,w:2.6,h:2.6,fill:{color:C.gold,transparency:84},line:{color:C.gold,transparency:100}});
+      if(C.blobs){[[10.2,-2.2,4.4,C.blobs[0],88],[11.6,-1.4,3.4,C.blobs[1],86],[12.2,-0.4,2.2,C.blobs[2],82]].forEach(([x,y,w,c,t])=>s.addShape(SH.ellipse,{x,y,w,h:w,fill:{color:c,transparency:t},line:{color:c,transparency:100}}))}
+      else{s.addShape(SH.ellipse,{x:10.9,y:-1.9,w:4.2,h:4.2,fill:{color:C.gold,transparency:90},line:{color:C.gold,transparency:100}});
+      s.addShape(SH.ellipse,{x:11.7,y:-1.1,w:2.6,h:2.6,fill:{color:C.gold,transparency:84},line:{color:C.gold,transparency:100}})}
       if(kicker)s.addText(kicker.toUpperCase(),{x:0.6,y:0.38,w:9.5,h:0.3,fontFace:FONT,fontSize:10.5,bold:true,color:C.gold,charSpacing:3});
       if(title)s.addText(title,{x:0.6,y:0.66,w:10.6,h:0.75,fontFace:FONT,fontSize:opts.titleSize||26,bold:true,color:C.ink,valign:'top',fit:'shrink'});
       s.addShape(SH.rect,{x:0.6,y:7.02,w:0.5,h:0.03,fill:{color:C.gold},line:{color:C.gold}});
@@ -119,9 +121,10 @@ async function buildDeck(btn){if(typeof PptxGenJS==='undefined'){toast('PowerPoi
     const order=SLIDES.filter(s=>DK.picks.has(s.id)&&deckAvail(D,s.id));
     for(const sl of order){
       if(sl.id==='title'||sl.id==='thanks'){const s=p.addSlide();page++;s.background={color:C.bg};
-        s.addShape(SH.ellipse,{x:7.6,y:-0.9,w:7.6,h:7.6,fill:{color:C.gold,transparency:93},line:{color:C.gold,transparency:100}});
+        if(C.blobs){[[6.8,-1.6,6.6,C.blobs[0],84],[9.4,0.4,5.2,C.blobs[1],82],[8.2,3.6,4.6,C.blobs[2],80],[10.4,1.6,2.6,C.blobs[1],70]].forEach(([x,y,w,c,t])=>s.addShape(SH.ellipse,{x,y,w,h:w,fill:{color:c,transparency:t},line:{color:c,transparency:100}}))}
+        else{s.addShape(SH.ellipse,{x:7.6,y:-0.9,w:7.6,h:7.6,fill:{color:C.gold,transparency:93},line:{color:C.gold,transparency:100}});
         s.addShape(SH.ellipse,{x:8.7,y:0.2,w:5.4,h:5.4,fill:{color:C.gold,transparency:86},line:{color:C.gold,transparency:100}});
-        s.addShape(SH.ellipse,{x:9.9,y:1.4,w:3.0,h:3.0,fill:{color:C.gold,transparency:70},line:{color:C.gold,transparency:100}});
+        s.addShape(SH.ellipse,{x:9.9,y:1.4,w:3.0,h:3.0,fill:{color:C.gold,transparency:70},line:{color:C.gold,transparency:100}})}
         s.addText(`NILA AI · ${(S.settings.company||'').toUpperCase()}`,{x:0.8,y:1.6,w:8,h:0.35,fontFace:FONT,fontSize:12,bold:true,color:C.gold,charSpacing:4});
         if(sl.id==='title'){s.addText(DK.title||'Business review',{x:0.8,y:2.1,w:8.2,h:1.9,fontFace:FONT,fontSize:40,bold:true,color:C.ink,valign:'top',fit:'shrink'});
           s.addText(D.per+(DK.account?` · ${DK.account}`:''),{x:0.8,y:4.1,w:8,h:0.45,fontFace:FONT,fontSize:18,color:C.gold});

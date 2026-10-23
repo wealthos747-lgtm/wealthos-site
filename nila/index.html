@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07080E">
+<meta name="theme-color" content="#F4F1FF">
 <meta name="robots" content="noindex,nofollow">
 <meta name="description" content="Nila AI: your private business-intelligence agent for key accounts.">
 <link rel="manifest" href="manifest.webmanifest">
@@ -17,14 +17,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="theme.css">
-<script>try{document.documentElement.dataset.theme=JSON.parse(localStorage.getItem('nila.theme'))||'dark'}catch(e){document.documentElement.dataset.theme='dark'}</script>
+<script>(function(){var t='aurora';try{t=JSON.parse(localStorage.getItem('nila.theme2'))||'aurora'}catch(e){}if(t==='auto')t=window.matchMedia('(prefers-color-scheme: dark)').matches?'nebula':'aurora';document.documentElement.dataset.theme=t})()</script>
 
 </head>
 <body>
 <header class="board">
   <div class="board-in">
     <button class="icon-btn" id="menuBtn" aria-label="Open menu" hidden><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <svg class="star" viewBox="0 0 40 40" aria-hidden="true"><mask id="moonCut"><rect width="40" height="40" fill="#fff"/><circle cx="27" cy="13" r="13" fill="#000"/></mask><circle cx="20" cy="20" r="16" fill="currentColor" mask="url(#moonCut)"/><circle cx="31" cy="27" r="1.6" fill="currentColor"/><circle cx="35" cy="20" r="1" fill="currentColor"/></svg>
+    <svg class="star" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="moonGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C5CFF"/><stop offset=".55" stop-color="#FF5FA2"/><stop offset="1" stop-color="#FF9F5A"/></linearGradient></defs><mask id="moonCut"><rect width="40" height="40" fill="#fff"/><circle cx="27" cy="13" r="13" fill="#000"/></mask><circle cx="20" cy="20" r="16" fill="currentColor" mask="url(#moonCut)"/><circle cx="31" cy="27" r="1.6" fill="currentColor"/><circle cx="35" cy="20" r="1" fill="currentColor"/></svg>
     <div class="board-grow">
       <div class="board-title">nila<span class="ai">AI</span></div>
       <div class="board-sub" id="boardSub">BUSINESS INTELLIGENCE</div>

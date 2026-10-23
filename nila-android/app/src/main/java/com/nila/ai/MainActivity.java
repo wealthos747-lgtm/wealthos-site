@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.graphics.Color;
+import android.view.View;
 import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.util.Base64;
@@ -109,6 +111,21 @@ public class MainActivity extends Activity {
                 i.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to Nila");
                 try { startActivityForResult(i, REQ_VOICE); }
                 catch (ActivityNotFoundException e) { Toast.makeText(MainActivity.this, "Voice typing is not available. Install the Google app.", Toast.LENGTH_LONG).show(); }
+            });
+        }
+
+        @JavascriptInterface public void setBars(final String hex, final boolean lightBg) {
+            runOnUiThread(() -> {
+                try {
+                    int c = Color.parseColor(hex);
+                    getWindow().setStatusBarColor(c);
+                    getWindow().setNavigationBarColor(c);
+                    View d = getWindow().getDecorView();
+                    int f = d.getSystemUiVisibility();
+                    if (Build.VERSION.SDK_INT >= 23) f = lightBg ? (f | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR) : (f & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+                    if (Build.VERSION.SDK_INT >= 26) f = lightBg ? (f | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR) : (f & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+                    d.setSystemUiVisibility(f);
+                } catch (Exception e) { }
             });
         }
 
