@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Geist:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Serif+Display&family=DM+Sans:wght@400;500;700&family=Chakra+Petch:wght@500;600;700&family=Archivo:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="theme.css?v=24">
+<link rel="stylesheet" href="theme.css?v=25">
 <script>(function(){var t='aurora';try{t=JSON.parse(localStorage.getItem('nila.theme2'))||'aurora'}catch(e){}if(t==='auto')t=window.matchMedia('(prefers-color-scheme: dark)').matches?'nebula':'liquid';document.documentElement.dataset.theme=t})()</script>
 
 </head>
@@ -294,7 +294,7 @@
 <script src="vendor/pptxgen.bundle.js" defer></script>
 <script src="vendor/marked.min.js"></script>
 <script src="vendor/purify.min.js"></script>
-<script src="runtime.js?v=24"></script>
+<script src="runtime.js?v=25"></script>
 
 <script>
 /* ================= ENGINE: pure calculations (no page access) ================= */
@@ -339,15 +339,17 @@ function toISO(v){
   if((m=s.match(/^(\d{1,2})[\s-]([A-Za-z]{3,4})[a-z]*[\s,-]+(\d{2,4})$/))){const mi=MONIDX[m[2].toLowerCase()];if(mi!=null){let y=+m[3];if(y<100)y+=2000;return dstr(new Date(y,mi,+m[1]))}}
   if((m=s.match(/^([A-Za-z]{3,4})[a-z]*[\s-](\d{2,4})$/))){const mi=MONIDX[m[1].toLowerCase()];if(mi!=null){let y=+m[2];if(y<100)y+=2000;return dstr(new Date(y,mi,1))}}
   return null}
-function cleanTable(raw){
+const ID_RE=/(^|[\s_\-.])(id|code)$|^(operator|bo|route|service|bus|agent|user|customer|account|partner|merchant|vendor|travels?)_?\s?(id|code|no)$|^(operatorid|routeid|serviceid|boid|bocode)$/i;
+function cleanTable(raw,pctCols){
   const cols=[],seen=new Set();for(const r of raw.slice(0,800))for(const k of Object.keys(r))if(!seen.has(k)){seen.add(k);cols.push(k)}
   const types={};
-  for(const c of cols){let n=0,num=0,dt=0;for(const r of raw.slice(0,1500)){const v=r[c];if(v==null||v==='')continue;n++;if(v instanceof Date)dt++;else if(typeof v==='number')num++;else if(typeof v==='string'){if(isNumStr(v))num++;else if(toISO(v))dt++}}types[c]=n===0?'text':dt/n>=.8?'date':num/n>=.8?'number':'text'}
+  for(const c of cols){let n=0,num=0,dt=0;for(const r of raw.slice(0,1500)){const v=r[c];if(v==null||v==='')continue;n++;if(v instanceof Date)dt++;else if(typeof v==='number')num++;else if(typeof v==='string'){if(isNumStr(v))num++;else if(toISO(v))dt++}}types[c]=n===0?'text':dt/n>=.8?'date':num/n>=.8?'number':'text';if(ID_RE.test(String(c).trim())&&types[c]!=='date')types[c]='text'}
+  const pctN={};for(const c of cols){let n=0,p=0;for(const r of raw.slice(0,1500)){const v=r[c];if(typeof v==='string'&&v.trim()){n++;if(/%\s*$/.test(v))p++}}if(n&&p/n>=.8)pctN[c]=1}
   const keep=cols.filter(c=>!(c.startsWith('__EMPTY')&&raw.every(r=>r[c]==null||r[c]==='')));
   const ren={};keep.forEach((c,i)=>{ren[c]=c.startsWith('__EMPTY')?'Column '+(i+1):String(c).trim()});
-  const rows=[];for(const r of raw){const o={};let any=false;for(const c of keep){let v=r[c];if(v===''||v===undefined)v=null;if(v!=null){if(types[c]==='number')v=typeof v==='number'?v:parseNum(v);else if(types[c]==='date')v=toISO(v);else v=v instanceof Date?toISO(v):String(v).trim()}if(v!=null&&v!=='')any=true;o[ren[c]]=v}if(any)rows.push(o)}
-  const t2={};for(const c of keep)t2[ren[c]]=types[c];
-  return{cols:keep.map(c=>ren[c]),types:t2,rows}}
+  const rows=[];for(const r of raw){const o={};let any=false;for(const c of keep){let v=r[c];if(v===''||v===undefined)v=null;if(v!=null){if(types[c]==='number')v=typeof v==='number'?v:parseNum(v);else if(types[c]==='date')v=toISO(v);else v=v instanceof Date?toISO(v):typeof v==='number'?String(Math.round(v*1e6)/1e6):String(v).trim()}if(v!=null&&v!=='')any=true;o[ren[c]]=v}if(any)rows.push(o)}
+  const t2={},units={};for(const c of keep){t2[ren[c]]=types[c];if(types[c]==='number'&&(pctN[c]||(pctCols&&pctCols[c])))units[ren[c]]='pct'}
+  return{cols:keep.map(c=>ren[c]),types:t2,units,rows}}
 const isRateCol=c=>/%|rate|ratio|avg|average|rating|occupancy|share|per\b|score|lqs|index|nps/i.test(c);
 
 /* ROI maths */
@@ -587,15 +589,21 @@ async function readFile(file,box,spaceId){
   try{const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});pending={file:file.name,wb,sheet:wb.SheetNames[0],box,space:spaceId};const used=wb.SheetNames.filter(n=>sheetTable(wb,n).rows.length);if(used.length>1)renderMulti();else{if(used[0])pending.sheet=used[0];prepareSheet()}}
   catch(e){box.replaceChildren(h('div',{class:'banner'},'Could not read this file. Save it as .csv or .xlsx and upload again.'))}}
 /* read one sheet, finding the real header row even when the sheet starts with titles or blank lines */
-function sheetTable(wb,name){wb._cache=wb._cache||{};if(wb._cache[name])return wb._cache[name];const ws=wb.Sheets[name];if(!ws||!ws['!ref']){return wb._cache[name]={cols:[],types:{},rows:[]}}
+function sheetTable(wb,name){wb._cache=wb._cache||{};if(wb._cache[name])return wb._cache[name];const ws=wb.Sheets[name];if(!ws||!ws['!ref']){return wb._cache[name]={cols:[],types:{},units:{},rows:[]}}
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true,blankrows:false});
   const filled=r=>(r||[]).filter(v=>v!=null&&String(v).trim()!=='').length;const maxW=Math.max(0,...aoa.slice(0,40).map(filled));
   let hi=0;for(let i=0;i<Math.min(aoa.length,20);i++){const r=aoa[i]||[];const f=filled(r);const txt=r.filter(v=>typeof v==='string'&&v.trim()).length;if(f>=Math.max(2,Math.ceil(maxW*.6))&&txt>=Math.ceil(f*.6)){hi=i;break}}
   const head=(aoa[hi]||[]).map((v,i)=>v==null||String(v).trim()===''?'Column '+(i+1):String(v).trim());const seen={};const names=head.map(n=>{seen[n]=(seen[n]||0)+1;return seen[n]>1?n+' '+seen[n]:n});
-  const objs=[];for(const r of aoa.slice(hi+1)){if(!filled(r))continue;const first=String((r||[])[0]??'').trim().toLowerCase();if(/^(grand )?total$/.test(first))continue;const o={};names.forEach((n,i)=>o[n]=r[i]===undefined?null:r[i]);objs.push(o)}
-  return wb._cache[name]=cleanTable(objs)}
+  /* columns whose numbers are formatted as % in Excel (0.22 shown as 22%) */
+  const rg=XLSX.utils.decode_range(ws['!ref']);const pctIdx={};
+  for(let ci=0;ci<names.length;ci++){let n=0,p=0;for(let r=rg.s.r;r<=Math.min(rg.e.r,rg.s.r+3000);r++){const cell=ws[XLSX.utils.encode_cell({r,c:rg.s.c+ci})];if(!cell||cell.t!=='n')continue;n++;if(/%/.test(cell.z||'')||/%\s*$/.test(cell.w||''))p++}if(n&&p/n>=.8)pctIdx[ci]=1}
+  const wide=names.filter(n=>/^[A-Za-z]{3,9}[\s\-'’]*\d{2,4}$/.test(n)&&toISO(n)).length>=2;
+  const objs=[];for(const r of aoa.slice(hi+1)){if(!filled(r))continue;const first=String((r||[])[0]??'').trim().toLowerCase();if(!wide&&/^(grand )?total$/.test(first))continue;const o={};names.forEach((n,i)=>{let v=r[i]===undefined?null:r[i];if(pctIdx[i]&&typeof v==='number')v=Math.round(v*1e8)/1e6;o[n]=v});objs.push(o)}
+  const used=names.filter(n=>objs.some(o=>o[n]!=null&&String(o[n]).trim()!==''));for(const o of objs)for(const n of names)if(!used.includes(n))delete o[n];
+  const pctCols={};names.forEach((n,i)=>{if(pctIdx[i])pctCols[n]=1});
+  return wb._cache[name]=cleanTable(objs,pctCols)}
 function prepareSheet(){pending.t=sheetTable(pending.wb,pending.sheet);renderImport()}
-const baseOf=f=>f.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\s+\d{4}[-_ ]?\d{2}[-_ ]?\d{2}.*$/,'').trim();
+const baseOf=f=>f.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\s+\d{4}[-_ ]?\d{2}[-_ ]?\d{2}.*$/,'').replace(/\s+\d{1,2}\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s*'?\s*\d{0,4}\s*$/i,'').replace(/\s+/g,' ').trim()||f;
 function matchFor(name,cols){const real=S.datasets.filter(d=>!d.demo);return real.find(d=>fullN(d.name)===fullN(name))||real.find(d=>d.columns.join('|')===cols.join('|'))}
 function guessType(name,cols){const t=(name+' '+cols.join(' ')).toLowerCase();const map=[[/red ?deal|offer|discount|coupon/,'Red Deal / offers revenue'],[/\blqs\b|quality score|listing quality/,'LQS / quality score'],[/\byb\b|\bbc\b|your ?bus/,'YB / BC'],[/kam|key account/,'KAM dashboard'],[/service|complaint|ticket status/,'Service information'],[/cancel|refund/,'Cancellations / refunds'],[/rating|review/,'Ratings / reviews'],[/target|plan|budget/,'Targets / plan'],[/spend|campaign|marketing|roas/,'Marketing spend / campaigns'],[/settle|payout|payment/,'Settlements / payments'],[/route/,'Route performance'],[/product|revenue/,'Revenue / products'],[/booking|seat|ticket|sales/,'Bookings / sales'],[/operator|travels/,'Operator performance']];for(const[re,tp]of map)if(re.test(t))return tp;return'Other'}
 function renderMulti(){const p=pending,box=p.box,base=baseOf(p.file);
@@ -608,16 +616,17 @@ function renderMulti(){const p=pending,box=p.box,base=baseOf(p.file);
       t.rows.length?h('div',{class:'grid2'},h('label',{class:'field'},h('span',{},'Report name'),x.name),h('label',{class:'field'},h('span',{},'Report type'),x.type)):'',
       t.rows.length?h('p',{class:'small muted'},m?h('span',{class:'chip violet'},'Updates "'+m.name+'"'):h('span',{class:'chip good'},'New report'),' ',ds.length?`Dates ${prettyY(ds[0])} → ${prettyY(ds.at(-1))}`:'No date column',' · ',h('span',{class:'mono'},t.cols.slice(0,6).join(', ')+(t.cols.length>6?' …':''))):'')});
   box.replaceChildren(h('div',{class:'card'},
-    h('div',{class:'row between'},h('h3',{},`${p.file} has ${items.length} sheets`),h('span',{class:'small muted'},'Each sheet becomes its own report')),
+    h('div',{class:'row between'},h('h3',{},`${p.file} has ${items.length} sheets`),h('span',{class:'small muted'},'Tick the sheets to keep')),
     canCombine?h('label',{class:'toggle',style:'color:var(--fg)'},comb,'Combine sheets that have the same columns into one report (e.g. one sheet per month)'):'',
     h('div',{class:'view',style:'gap:10px;animation:none'},rows),
-    h('div',{class:'row'},h('button',{class:'btn primary',id:'imAll',onclick:()=>importMany(items,comb.checked)},'Import selected sheets'),h('button',{class:'btn',onclick:()=>{const f=items.find(x=>x.cb.checked)||items[0];pending.sheet=f.n;prepareSheet()}},'Check one sheet in detail'),h('button',{class:'btn ghost',onclick:()=>{pending=null;box.replaceChildren()}},'Cancel'))))}
+    h('div',{class:'banner ok',style:'flex-direction:column;align-items:flex-start;gap:4px'},h('b',{},'Recommended: keep this Excel as ONE report'),h('span',{class:'small'},'All sheets stay together. Studio opens it as one full report with an overview, each sheet as a tab, and a deep dive on the raw data. Next week, upload the new file and the same report updates.')),
+    h('div',{class:'row'},h('button',{class:'btn primary',id:'imPack',onclick:()=>window.importPack?importPack(items):importMany(items,comb.checked)},'Import as one report'),h('button',{class:'btn',id:'imAll',onclick:()=>importMany(items,comb.checked)},'Import as separate reports'),h('button',{class:'btn',onclick:()=>{const f=items.find(x=>x.cb.checked)||items[0];pending.sheet=f.n;prepareSheet()}},'Check one sheet in detail'),h('button',{class:'btn ghost',onclick:()=>{pending=null;box.replaceChildren()}},'Cancel'))))}
 async function importMany(items,combine){const p=pending;const btn=$('#imAll');const sel=items.filter(x=>x.cb.checked&&x.t.rows.length);if(!sel.length){toast('Pick at least one sheet');return}
   btn.disabled=true;let jobs=sel.map(x=>({name:x.name.value.trim()||`${baseOf(p.file)} · ${x.n}`,type:x.type.value,t:x.t,sheets:[x.n]}));
   if(combine){const by={};for(const j of jobs){const k=j.t.cols.join('|');if(by[k]){by[k].t={cols:j.t.cols,types:{...by[k].t.types,...j.t.types},rows:by[k].t.rows.concat(j.t.rows)};by[k].sheets.push(...j.sheets)}else by[k]={...j,t:{...j.t,rows:j.t.rows.slice()}}}
     jobs=Object.values(by).map(j=>j.sheets.length>1?{...j,name:`${baseOf(p.file)} · ${j.sheets.length} sheets`}:j)}
   if(S.demo)clearDemo(true);const done=[];
-  try{for(const [i,j] of jobs.entries()){btn.textContent=`Saving ${i+1} of ${jobs.length}…`;const t=j.t;const meta={type:j.type,operatorCol:guessOpCol(t.cols,t.types,t.rows),dateCol:guessDateCol(t.cols,t.types),note:j.sheets.length>1?'Sheets: '+j.sheets.join(', '):'Sheet: '+j.sheets[0],space:p.space||''};
+  try{for(const [i,j] of jobs.entries()){btn.textContent=`Saving ${i+1} of ${jobs.length}…`;const t=j.t;const meta={type:j.type,units:t.units||{},operatorCol:guessOpCol(t.cols,t.types,t.rows),dateCol:guessDateCol(t.cols,t.types),note:j.sheets.length>1?'Sheets: '+j.sheets.join(', '):'Sheet: '+j.sheets[0],space:p.space||''};
       const ex=matchFor(j.name,t.cols);let rows=t.rows,cols=t.cols,types={...t.types};
       if(ex){const old=await loadRows(ex);cols=[...ex.columns];for(const c of t.cols)if(!cols.includes(c))cols.push(c);types={...ex.types,...t.types};const dc=meta.dateCol&&ex.dateCol?meta.dateCol:'';if(dc){const nd=t.rows.map(r=>r[dc]).filter(Boolean).sort();const lo=nd[0],hi=nd.at(-1);rows=lo?old.filter(r=>{const d=r[ex.dateCol];return!(d&&d>=lo&&d<=hi)}).concat(t.rows):old.concat(t.rows)}else rows=old.concat(t.rows);meta.type=ex.type||meta.type;meta.note=ex.note||meta.note;meta.space=ex.space||meta.space;if(ex.operatorCol)meta.operatorCol=ex.operatorCol;if(ex.dateCol)meta.dateCol=ex.dateCol}
       const id=ex?ex.id:newId();const ds=await writeDataset(id,{name:ex?ex.name:j.name,...meta,columns:cols,types},rows,ex,p.file+' / '+j.sheets.join(', '),t.rows.length);S.rows[id]=rows;S.datasets=[ds,...S.datasets.filter(d=>d.id!==id)];done.push(`${ds.name} (${nf.format(rows.length)} rows${ex?', updated':''})`)}
@@ -655,7 +664,7 @@ function previewTable(cols,types,rows){return tbl(cols.map(c=>c+(types[c]==='num
 async function doImport(){
   const btn=$('#imSave');btn.disabled=true;btn.textContent='Saving…';
   try{const t=pending.t,mode=$('#imMode').value;
-    const meta={type:$('#imType').value,operatorCol:$('#imOp').value,dateCol:$('#imDate').value,note:$('#imNote').value.trim(),space:$('#imSpace').value||''};
+    const meta={type:$('#imType').value,units:pending.t.units||{},operatorCol:$('#imOp').value,dateCol:$('#imDate').value,note:$('#imNote').value.trim(),space:$('#imSpace').value||''};
     let existing=null;if(mode!=='new'){existing=S.datasets.find(d=>d.id===$('#imTarget').value);if(!existing){toast('Choose the report to update');btn.disabled=false;btn.textContent='Save report';return}}
     let rows=t.rows,cols=t.cols,types={...t.types};
     if(existing){const old=await loadRows(existing);cols=[...existing.columns];for(const c of t.cols)if(!cols.includes(c))cols.push(c);types={...existing.types,...t.types};
@@ -673,12 +682,14 @@ async function writeDataset(id,base,rows,existing,file,added){
   if(cur.length)chunks.push(cur);
   const dpath=`${S.P.ds}/${id}`;
   if(S.saveOn){for(let i=0;i<chunks.length;i++)await store.set(`${dpath}/chunks/c${i}`,{r:chunks[i].map(a=>({v:a}))});if(existing&&existing.chunkCount>chunks.length)for(let i=chunks.length;i<existing.chunkCount;i++)await store.del(`${dpath}/chunks/c${i}`)}
-  const meta={...base,...derivedMeta(base,rows),chunkCount:chunks.length,uploads:[...((existing&&existing.uploads)||[]),{file,at:new Date().toISOString(),rows:added}].slice(-30),updatedAt:new Date().toISOString(),createdAt:(existing&&existing.createdAt)||new Date().toISOString()};
+  const keepOld=existing?{studio:existing.studio,notes:existing.notes,packCfg:existing.packCfg}:{};for(const k in keepOld)if(keepOld[k]===undefined)delete keepOld[k];
+  const meta={...keepOld,...base,...derivedMeta(base,rows),chunkCount:chunks.length,uploads:[...((existing&&existing.uploads)||[]),{file,at:new Date().toISOString(),rows:added}].slice(-30),updatedAt:new Date().toISOString(),createdAt:(existing&&existing.createdAt)||new Date().toISOString()};
   if(S.saveOn)await store.set(dpath,meta);return{id,...meta}}
 function derivedMeta(base,rows){const dates=base.dateCol?rows.map(r=>r[base.dateCol]).filter(Boolean).sort():[];return{rowCount:rows.length,minDate:dates[0]||null,maxDate:dates[dates.length-1]||null,opValues:base.operatorCol?[...new Set(rows.map(r=>r[base.operatorCol]).filter(Boolean))].slice(0,1500):[]}}
 async function loadRows(ds){if(S.rows[ds.id])return S.rows[ds.id];if(!S.saveOn||ds.demo)return S.rows[ds.id]||[];
   const parts=await Promise.all(Array.from({length:ds.chunkCount||0},(_,i)=>store.get(`${S.P.ds}/${ds.id}/chunks/c${i}`)));
-  const rows=[];for(const p of parts){if(!p)continue;for(const x of p.r){const o={};ds.columns.forEach((c,i)=>o[c]=x.v[i]);rows.push(o)}}S.rows[ds.id]=rows;return rows}
+  const rows=[];for(const p of parts){if(!p)continue;for(const x of p.r){const o={};ds.columns.forEach((c,i)=>o[c]=x.v[i]);rows.push(o)}}fixIdCols(ds,rows);S.rows[ds.id]=rows;return rows}
+function fixIdCols(ds,rows){const t=ds.types||{};for(const c of ds.columns){if(t[c]==='number'&&ID_RE.test(c)){for(const r of rows)if(typeof r[c]==='number')r[c]=String(r[c]);t[c]='text'}}ds.types=t}
 let dsFilter='all';
 const spaceName=id=>(S.spaces.find(s=>s.id===id)||{}).name;
 function dsRow(d){return h('div',{class:'ds'},
@@ -690,7 +701,8 @@ function renderData(){
   $('#dsFilter').replaceChildren(...[['all','All'],['','General'],...S.spaces.map(s=>[s.id,s.name])].map(([k,l])=>h('button',{class:'chip'+(dsFilter===k?' teal':''),style:'border:0;cursor:pointer',onclick:()=>{dsFilter=k;renderData()}},l)));
   const list=$('#dsList');const ds=S.datasets.filter(d=>dsFilter==='all'||(d.space||'')===dsFilter);
   if(!S.datasets.length){list.replaceChildren(h('div',{class:'empty'},h('h3',{},'No reports yet'),h('p',{class:'muted small'},'Start with the one you use most, like operator-wise weekly GMV from Superset. Then add revenue by product, marketing spend, cancellations, ratings, targets.'),h('button',{class:'btn sm',onclick:loadDemo},'Try with demo data first')));return}
-  list.replaceChildren(...(ds.length?ds.map(dsRow):[h('p',{class:'small muted'},'No reports here.')]))}
+  const seenP=new Set();const out=[];for(const d of ds){if(d.pack&&d.pack.id&&window.packCard){if(seenP.has(d.pack.id))continue;seenP.add(d.pack.id);out.push(packCard(d.pack.id))}else out.push(dsRow(d))}
+  list.replaceChildren(...(out.length?out:[h('p',{class:'small muted'},'No reports here.')]))}
 async function previewDs(d){openSheet(d.name,dots('Loading rows…'));const rows=await loadRows(d);const last=d.dateCol?[...rows].sort((a,b)=>String(b[d.dateCol]).localeCompare(String(a[d.dateCol]))):rows;openSheet(d.name,h('p',{class:'muted small'},`Showing ${Math.min(50,rows.length)} of ${nf.format(rows.length)} rows${d.dateCol?', latest first':''}.`),previewTable(d.columns,d.types||{},last.slice(0,50)))}
 function editDs(d){const colOpts=(sel,blank)=>[h('option',{value:''},blank),...d.columns.map(c=>h('option',{value:c,selected:c===sel},c))];
   openSheet('Edit '+d.name,h('div',{class:'grid2'},h('label',{class:'field'},h('span',{},'Name'),h('input',{type:'text',id:'edName',value:d.name})),h('label',{class:'field'},h('span',{},'Report type'),h('select',{id:'edType'},DS_TYPES.map(x=>h('option',{selected:d.type===x},x)))),h('label',{class:'field'},h('span',{},'Keep in'),h('select',{id:'edSpace'},h('option',{value:''},'General (all tabs)'),S.spaces.map(s=>h('option',{value:s.id,selected:d.space===s.id},s.name)))),h('label',{class:'field'},h('span',{},acc()+' column'),h('select',{id:'edOp'},colOpts(d.operatorCol,'None'))),h('label',{class:'field'},h('span',{},'Date column'),h('select',{id:'edDate'},colOpts(d.dateCol,'None')))),h('label',{class:'field'},h('span',{},'Note for Nila'),h('textarea',{id:'edNote',rows:3},d.note||'')),
@@ -1458,10 +1470,11 @@ async function restoreBackup(file){let data;try{data=JSON.parse(await file.text(
 
 document.addEventListener('DOMContentLoaded',boot);
 </script>
-<script src="studio.js?v=24"></script>
-<script src="deck.js?v=24"></script>
-<script src="guide.js?v=24"></script>
-<script src="sync.js?v=24"></script>
+<script src="studio.js?v=25"></script>
+<script src="deck.js?v=25"></script>
+<script src="guide.js?v=25"></script>
+<script src="sync.js?v=25"></script>
+<script src="pack.js?v=25"></script>
 
 </body>
 </html>

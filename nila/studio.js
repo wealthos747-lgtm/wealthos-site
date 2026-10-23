@@ -31,12 +31,12 @@ const Studio={
     const m={ds,rows,measures,dims,calc,joinNum,dateCol:ds.dateCol||'',cfg};
     m.distinct={};for(const d of dims){const s=new Map();for(const r of rows){const v=r[d];if(v==null||v==='')continue;s.set(v,(s.get(v)||0)+1)}m.distinct[d]=s.size}
     return m},
-  isRate:(m,c)=>!m.calc[c]&&!m.joinNum[c]&&RATE_RE.test(c),
+  isRate:(m,c)=>!m.calc[c]&&!m.joinNum[c]&&(RATE_RE.test(c)||!!(m.ds.units&&m.ds.units[c]==='pct')),
   val(m,rows,c){if(m.calc[c])return Formula.run(m.calc[c],v=>this.val(m,rows,this.resolve(m,v)));
     const j=m.joinNum[c];if(j){const seen=new Set();let s=0;for(const r of rows){const k=String(r[j.key]??'').trim().toLowerCase();if(!k||seen.has(k))continue;seen.add(k);const e=j.map.get(k);if(e&&typeof e[j.col]==='number')s+=e[j.col]}return s}
     let s=0,n=0;for(const r of rows){const v=r[c];if(typeof v==='number'){s+=v;n++}}return this.isRate(m,c)?(n?s/n:null):s},
   resolve(m,name){const f=m.measures.find(x=>x.toLowerCase()===String(name).toLowerCase());return f||name},
-  fmt(m,c,v){if(v==null||!isFinite(v))return'–';if(this.isRate(m,c)){if(/%/.test(c))return v.toFixed(1)+'%';if(Math.abs(v)<=1&&/share|rate|occupancy|ratio/i.test(c))return(v*100).toFixed(1)+'%';return Math.abs(v)<100?v.toFixed(2):fmtShort(v)}return MONEY_RE.test(c)?'₹'+fmtShort(v):fmtShort(v)},
+  fmt(m,c,v){if(v==null||!isFinite(v))return'–';if(m.ds.units&&m.ds.units[c]==='pct')return v.toFixed(2)+'%';if(this.isRate(m,c)){if(/%/.test(c))return v.toFixed(1)+'%';if(Math.abs(v)<=1&&/share|rate|occupancy|ratio/i.test(c))return(v*100).toFixed(1)+'%';return Math.abs(v)<100?v.toFixed(2):fmtShort(v)}return MONEY_RE.test(c)?'₹'+fmtShort(v):fmtShort(v)},
   pickMeasures(m){const pr=[/gmv|revenue|sales|amount|income|deal/i,/seat|booking|ticket|order|trip|sold|qty/i,/commission|margin|take/i,/cancel|refund/i,/rating|lqs|score|occupancy/i,/spend|cost|discount|burn/i];const out=[];for(const re of pr){const f=m.measures.find(c=>re.test(c)&&!out.includes(c));if(f)out.push(f)}for(const c of m.measures)if(out.length<4&&!out.includes(c))out.push(c);return out.slice(0,4)},
   pickDims(m){const opc=m.ds.operatorCol;const ranked=m.dims.filter(d=>m.distinct[d]>1).sort((a,b)=>{const s=d=>(d===opc?-100:0)+(/route|product|category|service|city|channel|region|bp|type/i.test(d)?-50:0)+Math.abs(Math.log((m.distinct[d]||1)/12));return s(a)-s(b)});return ranked},
   range(m,key,from,to){const dc=m.dateCol;if(!dc||key==='all')return null;const maxD=m.ds.maxDate||today();
@@ -94,7 +94,15 @@ function studioView(){const v=$('#view-studio');if(!v)return;
     h('div',{class:'view-head'},h('div',{},h('h2',{},'Nila Studio'),h('p',{class:'muted small'},'Drop any Excel or CSV. Nila builds a Power BI style dashboard in seconds: KPIs, trends, top accounts, mix, movers and a pivot table. No AI key needed.'))),
     studioDrop(),h('div',{class:'empty'},h('h3',{},'No reports yet'),h('p',{class:'small muted'},'Try Red Deal revenue, KAM dashboard, service information, YB/BC or LQS downloads. Or look around with demo data first.'),h('button',{class:'btn sm primary',onclick:loadDemo},'Load demo data')));return}
   let id=ST.dsId&&dsById(ST.dsId)?ST.dsId:(lsGet('nila.studio.last',null)&&dsById(lsGet('nila.studio.last',null))?lsGet('nila.studio.last',null):dsList[0].id);
-  const sel=h('select',{'aria-label':'Report'},dsList.map(d=>h('option',{value:d.id,selected:d.id===id},d.name+(d.demo?' (demo)':''))));sel.onchange=()=>{ST.dsId=sel.value;ST.m=null;studioView()};
+  const packs=window.packList?packList():[];const lastSel=lsGet('nila.studio.last',null);
+  if(ST.packId===undefined)ST.packId=typeof lastSel==='string'&&lastSel.startsWith('pack:')&&packs.some(p=>p.id===lastSel.slice(5))?lastSel.slice(5):(ST.wantPack||null);
+  if(ST.packId&&!packs.some(p=>p.id===ST.packId))ST.packId=null;
+  const opt=d=>h('option',{value:d.id,selected:!ST.packId&&d.id===id},(d.pack?'  ↳ '+d.pack.sheet:d.name)+(d.demo?' (demo)':''));
+  const sel=h('select',{'aria-label':'Report'},packs.length?h('optgroup',{label:'Full reports (one Excel each)'},packs.map(p=>h('option',{value:'pack:'+p.id,selected:ST.packId===p.id},'📘 '+p.name+' · '+p.members.length+' sheets'))):'',
+    packs.map(p=>h('optgroup',{label:p.name+' · single sheets'},p.members.map(opt))),h('optgroup',{label:'Reports'},dsList.filter(d=>!d.pack).map(opt)));
+  sel.onchange=()=>{if(sel.value.startsWith('pack:')){ST.packId=sel.value.slice(5);lsSet('nila.studio.last',sel.value)}else{ST.packId=null;ST.dsId=sel.value;ST.m=null;lsSet('nila.studio.last',sel.value)}studioView()};
+  if(ST.packId&&window.packView){const pbody=h('div',{class:'view'});v.replaceChildren(h('div',{class:'view-head'},h('div',{},h('h2',{},'Nila Studio'),h('p',{class:'muted small'},'One Excel, one full report. Pick the months, read the story, type your reasons and follow-ups.'))),
+    h('div',{class:'studio-top'},sel,h('button',{class:'btn sm',onclick:()=>{const box=h('div',{});openSheet('Add a report',studioDrop(box),box)}},'+ Upload report')),pbody);packView(pbody,ST.packId);return}
   const body=h('div',{class:'view'},h('div',{class:'card'},dots('Building your dashboard…')));
   v.replaceChildren(h('div',{class:'view-head'},h('div',{},h('h2',{},'Nila Studio'),h('p',{class:'muted small'},'Tap any bar or slice to filter everything. Change the number, the split and the period from the bar below.'))),
     h('div',{class:'studio-top'},sel,h('button',{class:'btn sm',onclick:()=>{const box=h('div',{});openSheet('Add a report',studioDrop(box),box)}},'+ Upload report'),h('button',{class:'btn sm',onclick:openFields},'Fields & formulas'),h('button',{class:'btn sm',onclick:openJoin},'Link another file'),h('span',{style:'flex:1'}),viewsMenu()),body);
