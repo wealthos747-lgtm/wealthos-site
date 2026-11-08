@@ -19,10 +19,10 @@
   </header>
 
   <h1>Privacy Policy</h1>
-  <p class="muted">Effective date: 15 October 2026</p>
+  <p class="muted">Effective date: 8 November 2026</p>
 
   <div class="card">
-    <p><strong>In short:</strong> RupeeFlow is a personal money tracker. You type in your own money details. They are stored in your own private space in Google Firebase, linked to your login, and only you can open them. We show no ads, we do not sell or share your data, and we never read your SMS, contacts, photos or location. You can delete your account and all its data from inside the app at any time.</p>
+    <p><strong>In short:</strong> RupeeFlow is a personal money tracker. You type in your own money details. They are stored in your own private space in Google Firebase, linked to your login, and only you can open them. We show no ads and we do not sell your data. We never read your contacts, photos or location. <strong>Optional</strong> features, all off until you turn them on, can read your bank SMS on your phone, read a bank statement you pick, listen when you tap the mic, and use Google's Gemini AI to answer questions about your entries (see section 5). You can delete your account and all its data from inside the app at any time.</p>
   </div>
 
   <p>This policy explains how the RupeeFlow Android app (package <code>com.suresh.wealthos</code>, "the app", "we") handles your information. RupeeFlow is made by an independent developer in Chennai, India. Contact: <a href="mailto:wealthos747@gmail.com">wealthos747@gmail.com</a>.</p>
@@ -36,7 +36,7 @@
   </ul>
   <h3>Money information you enter</h3>
   <p>Everything you add yourself: income and expense entries, accounts and balances, categories and budgets, your Money Plan, savings and investments (SIPs, mutual funds, FD, RD, PPF, gold and similar), loans, repeating bills, future needs, goals, insurance policies, business entries and app settings. You can also import entries from Excel/CSV files or backup files you pick.</p>
-  <p>The app does <strong>not</strong> connect to your bank, does <strong>not</strong> read SMS, and does <strong>not</strong> ask for bank passwords, card numbers or UPI PINs. Please do not type such details into notes.</p>
+  <p>The app does <strong>not</strong> connect to your bank and does <strong>not</strong> ask for bank logins, passwords, card numbers or UPI PINs. Please do not type such details into notes. Bank SMS reading and statement import are optional and described in section 5.</p>
   <h3>Technical information</h3>
   <p>Google Firebase, which runs our login and database, processes technical data such as IP address and device/app identifiers to sign you in securely, prevent abuse and keep the service working. We do not use any analytics, advertising or tracking SDK.</p>
 
@@ -62,7 +62,30 @@
     <li><strong>Exports:</strong> Excel, CSV, PDF and backup files are created only when you ask, and go only where you choose to share them.</li>
   </ul>
 
-  <h2>5. Prices from public sources</h2>
+  <h2>5. Optional AI and bank automation</h2>
+  <p>These features are off until you turn them on in <em>Setup → AI &amp; bank automation</em>, and you can turn them off at any time. Some may not be in every version of the app.</p>
+  <h3>AI answers, insights and auto categories (Google Gemini)</h3>
+  <ul>
+    <li>When you ask a question, open monthly insights, use voice entry, let AI pick categories or read a statement, the app sends the details needed for that answer to <strong>Google Gemini through Firebase AI Logic</strong>: entry dates, amounts, types, category and account names, notes and the question itself.</li>
+    <li>We ask for your consent before the first AI use. We never send your login password, PIN, bank passwords or full SMS text to the AI.</li>
+    <li>Google processes this data to give the answer under the Gemini API terms. While the app uses Google's no-cost tier, Google may use these requests to improve its products and people at Google may review them. Do not put very private details in notes if you are not comfortable with this.</li>
+    <li>RupeeFlow does not keep a separate copy of your questions or answers outside your device and account.</li>
+  </ul>
+  <h3>Microphone (voice questions and voice entry)</h3>
+  <p>The app records your voice <strong>only while you tap the mic</strong>. The short recording is sent to Google Gemini (or, if AI is off, to your phone's own speech service) to understand what you said, then deleted from the phone. We do not store recordings.</p>
+  <h3>Bank SMS (Android permission: read SMS)</h3>
+  <ul>
+    <li>If you turn this on and allow the permission, the app reads your SMS inbox <strong>on your phone</strong> to find debit and credit messages from banks.</li>
+    <li>Messages from people, OTPs, offers, reminders and anything not from a bank sender are skipped. The full SMS text never leaves your phone and is never sent to the AI.</li>
+    <li>From each bank message we keep only the amount, date, payee name, bank name and the last 4 digits of the account or card, saved as an entry in your own account. New entries wait for your approval unless you turn on Smart approve for shops you have approved before.</li>
+    <li>You can turn it off in the app or remove the SMS permission in Android settings at any time.</li>
+  </ul>
+  <h3>Bank statement import</h3>
+  <p>When you pick a statement file (PDF, Excel or CSV), it is opened on your phone. A statement password is used only to open the file and is never saved. The statement text is sent to Google Gemini to read the transaction rows, and you check the rows before anything is added.</p>
+  <h3>App verification (Firebase App Check)</h3>
+  <p>To stop others from misusing our AI access, Firebase App Check (with Google Play Integrity for Play Store installs) checks that requests come from the genuine RupeeFlow app. Google processes device and app integrity signals for this.</p>
+
+  <h2>6. Prices from public sources</h2>
   <p>To show today's value of your investments, the app downloads public prices. These requests contain no personal information (only a fund name or scheme code you searched, or a general price request):</p>
   <div class="tablewrap"><table>
     <tr><th>What</th><th>Service</th></tr>
@@ -72,29 +95,29 @@
   </table></div>
   <p>These services may see your IP address, like any website you visit, under their own policies.</p>
 
-  <h2>6. Sharing</h2>
-  <p>We do not share your personal or financial data with third parties. Your data is processed only by our service providers needed to run the app: Google Firebase (login and database) and Google Play (app delivery and in-app updates). We would disclose information only if required by Indian law.</p>
+  <h2>7. Sharing</h2>
+  <p>We do not share your personal or financial data with third parties. Your data is processed only by our service providers needed to run the app: Google Firebase (login, database and App Check), Google Gemini through Firebase AI Logic (only for the optional AI features in section 5) and Google Play (app delivery and in-app updates). We would disclose information only if required by Indian law.</p>
 
-  <h2>7. Your choices and rights</h2>
+  <h2>8. Your choices and rights</h2>
   <ul>
     <li><strong>See and change</strong> all your data in the app at any time.</li>
     <li><strong>Export</strong> it as Excel, CSV or a full backup file (Setup → Backup &amp; export).</li>
     <li><strong>Delete</strong> your account and all its data: in the app, <em>Setup → Security → Delete my account</em>, or by emailing <a href="mailto:wealthos747@gmail.com">wealthos747@gmail.com</a> from your account email. Details: <a href="delete-account.html">Delete your account</a>.</li>
   </ul>
 
-  <h2>8. Retention</h2>
+  <h2>9. Retention</h2>
   <p>Your data is kept while your account exists. When you delete your account, your data and login are removed from our live database immediately (in-app) or within 7 days of your email request (at most 30 days). Residual copies in Google's internal system backups are cleared by Google on its normal schedule.</p>
 
-  <h2>9. Children</h2>
+  <h2>10. Children</h2>
   <p>RupeeFlow is meant for adults (18+) managing their own money. It is not directed to children, and we do not knowingly collect data from children.</p>
 
-  <h2>10. Security</h2>
+  <h2>11. Security</h2>
   <p>We use Firebase security rules, encrypted connections, an app lock with PIN/biometrics and a hidden recent-apps preview. No method is 100% secure; please use a strong password and keep your phone locked.</p>
 
-  <h2>11. Changes</h2>
+  <h2>12. Changes</h2>
   <p>If this policy changes, we will update this page and its effective date. Important changes will also be mentioned in the app's release notes.</p>
 
-  <h2>12. Contact</h2>
+  <h2>13. Contact</h2>
   <p>Email: <a href="mailto:wealthos747@gmail.com">wealthos747@gmail.com</a> · Chennai, Tamil Nadu, India.</p>
 
   <footer>
